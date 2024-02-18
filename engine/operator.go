@@ -8,35 +8,34 @@ var (
 	EqualOperatorType OperatorType = "equal_operator"
 )
 
-type ValueOperator[T any] interface {
-	Resolve(e Entity) (T, error)
+type ValueOperator interface {
+	Resolve(e Entity) (ComparableValue, error)
 	IsResolvable(e Entity) bool            // call this before Resolve to check if value can be resolvable and avoid errors
 	GetMissingFields(e Entity) []FieldName // retrieve missing fields
 }
 
-type ComparableValue[T any] interface {
-	Equal(T) bool
-	Less(T) bool
-	Greater(T) bool
+type ComparableValue interface {
+	Equal(ComparableValue) (bool, error)
+	Less(ComparableValue) (bool, error)
 }
 
-type FieldValue[T ComparableValue[T]] struct {
+type FieldValue struct {
 	fieldName FieldName
 }
 
-func NewFieldValue[T ComparableValue[T]](fieldName FieldName) FieldValue[T] {
-	return FieldValue[T]{
+func NewFieldValue(fieldName FieldName) FieldValue {
+	return FieldValue{
 		fieldName: fieldName,
 	}
 }
 
-func (o FieldValue[T]) Resolve(e Entity) (res T, err error) {
+func (o FieldValue) Resolve(e Entity) (res ComparableValue, err error) {
 	v, err := e.SeekField(o.fieldName)
 	if err != nil {
 		return res, err
 	}
 
-	fv, ok := v.(T)
+	fv, ok := v.(ComparableValue)
 	if !ok {
 		return res, errors.New("type does not match")
 	}
@@ -44,11 +43,11 @@ func (o FieldValue[T]) Resolve(e Entity) (res T, err error) {
 	return fv, nil
 }
 
-func (o FieldValue[T]) IsResolvable(e Entity) bool {
+func (o FieldValue) IsResolvable(e Entity) bool {
 	return e.IsFieldPresent(o.fieldName)
 }
 
-func (o FieldValue[T]) GetMissingFields(e Entity) []FieldName {
+func (o FieldValue) GetMissingFields(e Entity) []FieldName {
 	if !o.IsResolvable(e) {
 		return []FieldName{o.fieldName}
 	} else {
@@ -56,15 +55,15 @@ func (o FieldValue[T]) GetMissingFields(e Entity) []FieldName {
 	}
 }
 
-type ConstValue[T ComparableValue[T]] struct {
+type ConstValue[T ComparableValue] struct {
 	value T
 }
 
-func NewConstValue[T ComparableValue[T]](v T) ConstValue[T] {
+func NewConstValue[T ComparableValue](v T) ConstValue[T] {
 	return ConstValue[T]{value: v}
 }
 
-func (o ConstValue[T]) Resolve(e Entity) (T, error) {
+func (o ConstValue[T]) Resolve(e Entity) (ComparableValue, error) {
 	return o.value, nil
 }
 
@@ -85,18 +84,18 @@ type ComparisonOperatorInterface interface {
 /*
 EqualOperator takes 2 values and returns if their values match
 */
-type EqualOperator[T ComparableValue[T]] struct {
-	a, b ValueOperator[T]
+type EqualOperator struct {
+	a, b ValueOperator
 }
 
-func NewEqualOperator[T ComparableValue[T]](a, b ValueOperator[T]) *EqualOperator[T] {
-	return &EqualOperator[T]{
+func NewEqualOperator(a, b ValueOperator) *EqualOperator {
+	return &EqualOperator{
 		a: a,
 		b: b,
 	}
 }
 
-func (o *EqualOperator[T]) Resolve(e Entity) (bool, error) {
+func (o *EqualOperator) Resolve(e Entity) (bool, error) {
 	va, err := o.a.Resolve(e)
 	if err != nil {
 		return false, err
@@ -107,13 +106,49 @@ func (o *EqualOperator[T]) Resolve(e Entity) (bool, error) {
 		return false, err
 	}
 
-	return va.Equal(vb), nil
+	return va.Equal(vb)
 }
 
-func (o *EqualOperator[T]) IsResolvable(e Entity) bool {
+func (o *EqualOperator) IsResolvable(e Entity) bool {
 	return o.a.IsResolvable(e) && o.b.IsResolvable(e)
 }
 
-func (o *EqualOperator[T]) GetMissingFields(e Entity) []FieldName {
+func (o *EqualOperator) GetMissingFields(e Entity) []FieldName {
+	return append(o.a.GetMissingFields(e), o.b.GetMissingFields(e)...)
+}
+
+/*
+LessThanOperator takes 2 values and returns if a is less than b
+*/
+type LessThanOperator struct {
+	a, b ValueOperator
+}
+
+func NewLessThanOperator(a, b ValueOperator) *LessThanOperator {
+	return &LessThanOperator{
+		a: a,
+		b: b,
+	}
+}
+
+func (o *LessThanOperator) Resolve(e Entity) (bool, error) {
+	va, err := o.a.Resolve(e)
+	if err != nil {
+		return false, err
+	}
+
+	vb, err := o.b.Resolve(e)
+	if err != nil {
+		return false, err
+	}
+
+	return va.Less(vb)
+}
+
+func (o *LessThanOperator) IsResolvable(e Entity) bool {
+	return o.a.IsResolvable(e) && o.b.IsResolvable(e)
+}
+
+func (o *LessThanOperator) GetMissingFields(e Entity) []FieldName {
 	return append(o.a.GetMissingFields(e), o.b.GetMissingFields(e)...)
 }

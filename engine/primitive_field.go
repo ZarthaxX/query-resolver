@@ -1,6 +1,10 @@
 package engine
 
-import "golang.org/x/exp/constraints"
+import (
+	"errors"
+
+	"golang.org/x/exp/constraints"
+)
 
 type PrimitiveValue[T constraints.Ordered] struct {
 	Value T
@@ -12,16 +16,26 @@ func NewPrimitiveValue[T constraints.Ordered](v T) PrimitiveValue[T] {
 	}
 }
 
-func (v PrimitiveValue[T]) Equal(o PrimitiveValue[T]) bool {
-	return v.Value == o.Value
+func (v PrimitiveValue[T]) Equal(o ComparableValue) (bool, error) {
+	ov, ok := o.(PrimitiveValue[T])
+	if !ok {
+		return false, errors.New("invalid type")
+	}
+	return v.Value == ov.Value, nil
 }
 
-func (v PrimitiveValue[T]) Less(o PrimitiveValue[T]) bool {
-	return v.Value < o.Value
+func (v PrimitiveValue[T]) Less(o ComparableValue) (bool, error) {
+	ov, ok := o.(PrimitiveValue[T])
+	if !ok {
+		return false, errors.New("invalid type")
+	}
+	return v.Value < ov.Value, nil
 }
 
-func (v PrimitiveValue[T]) Greater(o PrimitiveValue[T]) bool {
-	return v.Value > o.Value
-}
+type Int64Value = PrimitiveValue[int64]
 
-type IntValue = PrimitiveValue[int]
+func NewInt64Value(v int64) Int64Value {
+	return Int64Value{
+		Value: v,
+	}
+}

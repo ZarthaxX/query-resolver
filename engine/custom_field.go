@@ -1,12 +1,12 @@
 package engine
 
-type ServiceAmount = PrimitiveValue[int]
+type ServiceAmount = PrimitiveValue[int64]
 
-func NewServiceAmount(v int) ServiceAmount {
+var ServiceAmountName FieldName = "order.service_amount"
+var ServiceAmountField = NewFieldValue(ServiceAmountName)
+
+func NewServiceAmount(v int64) ServiceAmount {
 	return ServiceAmount{
 		Value: v,
 	}
 }
-
-var ServiceAmountName FieldName = "order.service_amount"
-var ServiceAmountField = NewFieldValue[ServiceAmount](ServiceAmountName)
