@@ -3,6 +3,7 @@ package engine
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 )
 
@@ -62,9 +63,9 @@ func (n equalNodeDTO) parse() (ComparisonOperatorInterface, error) {
 		valueA, valueB = valueB, valueA
 	}
 
-	if n.ValueA.Field != nil && n.ValueB.Const != nil {
-		dtoA := n.ValueA.Field
-		dtoB := n.ValueB.Const
+	if valueA.Field != nil && valueB.Const != nil {
+		dtoA := valueA.Field
+		dtoB := valueB.Const
 
 		switch dtoA.Name {
 		case ServiceAmountName:
@@ -72,7 +73,7 @@ func (n equalNodeDTO) parse() (ComparisonOperatorInterface, error) {
 			if err != nil {
 				return nil, err
 			}
-
+			fmt.Println("creating operator")
 			return NewEqualOperator[ServiceAmount](
 				ServiceAmountField,
 				NewConstValue[ServiceAmount](NewServiceAmount(int(cb))),
