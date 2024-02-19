@@ -5,8 +5,8 @@ type ServiceAmount = PrimitiveValue[int64]
 var ServiceAmountName FieldName = "order.service_amount"
 var ServiceAmountField = NewFieldValue(ServiceAmountName)
 
+var EmptyServiceAmount = ServiceAmount(NewPrimitiveValue[int64](0, false))
+
 func NewServiceAmount(v int64) ServiceAmount {
-	return ServiceAmount{
-		Value: v,
-	}
+	return NewPrimitiveValue[int64](v, true)
 }

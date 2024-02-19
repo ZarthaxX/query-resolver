@@ -7,13 +7,19 @@ import (
 )
 
 type PrimitiveValue[T constraints.Ordered] struct {
-	Value T
+	value  T
+	exists bool
 }
 
-func NewPrimitiveValue[T constraints.Ordered](v T) PrimitiveValue[T] {
+func NewPrimitiveValue[T constraints.Ordered](v T, exists bool) PrimitiveValue[T] {
 	return PrimitiveValue[T]{
-		Value: v,
+		value:  v,
+		exists: exists,
 	}
+}
+
+func (v PrimitiveValue[T]) Exists() bool {
+	return v.exists
 }
 
 func (v PrimitiveValue[T]) Equal(o ComparableValue) (bool, error) {
@@ -21,7 +27,7 @@ func (v PrimitiveValue[T]) Equal(o ComparableValue) (bool, error) {
 	if !ok {
 		return false, errors.New("invalid type")
 	}
-	return v.Value == ov.Value, nil
+	return v.value == ov.value, nil
 }
 
 func (v PrimitiveValue[T]) Less(o ComparableValue) (bool, error) {
@@ -29,13 +35,13 @@ func (v PrimitiveValue[T]) Less(o ComparableValue) (bool, error) {
 	if !ok {
 		return false, errors.New("invalid type")
 	}
-	return v.Value < ov.Value, nil
+	return v.value < ov.value, nil
 }
 
 type Int64Value = PrimitiveValue[int64]
 
 func NewInt64Value(v int64) Int64Value {
 	return Int64Value{
-		Value: v,
+		value: v,
 	}
 }

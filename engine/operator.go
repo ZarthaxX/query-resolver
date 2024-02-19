@@ -10,13 +10,14 @@ var (
 
 type ValueOperator interface {
 	Resolve(e Entity) (ComparableValue, error)
-	IsResolvable(e Entity) bool            // call this before Resolve to check if value can be resolvable and avoid errors
-	GetMissingFields(e Entity) []FieldName // retrieve missing fields
+	IsResolvable(e Entity) bool // call this before Resolve to check if value can be resolvable and avoid errors
+	Visit(visitor OperatorVisitorIntarface)
 }
 
 type ComparableValue interface {
 	Equal(ComparableValue) (bool, error)
 	Less(ComparableValue) (bool, error)
+	Exists() bool
 }
 
 type FieldValue struct {
@@ -47,38 +48,41 @@ func (o FieldValue) IsResolvable(e Entity) bool {
 	return e.IsFieldPresent(o.fieldName)
 }
 
-func (o FieldValue) GetMissingFields(e Entity) []FieldName {
-	if !o.IsResolvable(e) {
-		return []FieldName{o.fieldName}
-	} else {
-		return nil
-	}
+func (o FieldValue) Visit(visitor OperatorVisitorIntarface) {
+	visitor.Field(o)
 }
 
-type ConstValue[T ComparableValue] struct {
-	value T
+type ConstValue struct {
+	value ComparableValue
 }
 
-func NewConstValue[T ComparableValue](v T) ConstValue[T] {
-	return ConstValue[T]{value: v}
+func NewConstValue(v ComparableValue) ConstValue {
+	return ConstValue{value: v}
 }
 
-func (o ConstValue[T]) Resolve(e Entity) (ComparableValue, error) {
+func (o ConstValue) Resolve(e Entity) (ComparableValue, error) {
 	return o.value, nil
 }
 
-func (o ConstValue[T]) IsResolvable(e Entity) bool {
+func (o ConstValue) IsResolvable(e Entity) bool {
 	return true
 }
 
-func (o ConstValue[T]) GetMissingFields(e Entity) []FieldName {
-	return nil
+func (o ConstValue) Visit(visitor OperatorVisitorIntarface) {
+	visitor.Const(o)
+}
+
+type OperatorVisitorIntarface interface {
+	Equal(EqualOperator)
+	LessThan(LessThanOperator)
+	Const(ConstValue)
+	Field(FieldValue)
 }
 
 type ComparisonOperatorInterface interface {
 	Resolve(e Entity) (bool, error)
 	IsResolvable(e Entity) bool
-	GetMissingFields(e Entity) []FieldName
+	Visit(visitor OperatorVisitorIntarface)
 }
 
 /*
@@ -113,8 +117,11 @@ func (o *EqualOperator) IsResolvable(e Entity) bool {
 	return o.a.IsResolvable(e) && o.b.IsResolvable(e)
 }
 
-func (o *EqualOperator) GetMissingFields(e Entity) []FieldName {
-	return append(o.a.GetMissingFields(e), o.b.GetMissingFields(e)...)
+func (o *EqualOperator) Visit(visitor OperatorVisitorIntarface) {
+	visitor.Equal(*o)
+
+	o.a.Visit(visitor)
+	o.b.Visit(visitor)
 }
 
 /*
@@ -149,6 +156,9 @@ func (o *LessThanOperator) IsResolvable(e Entity) bool {
 	return o.a.IsResolvable(e) && o.b.IsResolvable(e)
 }
 
-func (o *LessThanOperator) GetMissingFields(e Entity) []FieldName {
-	return append(o.a.GetMissingFields(e), o.b.GetMissingFields(e)...)
+func (o *LessThanOperator) Visit(visitor OperatorVisitorIntarface) {
+	visitor.LessThan(*o)
+
+	o.a.Visit(visitor)
+	o.b.Visit(visitor)
 }

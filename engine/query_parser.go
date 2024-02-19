@@ -130,7 +130,7 @@ func (n constNodeDTO) parse() (ValueOperator, error) {
 			return nil, err
 		}
 
-		return NewConstValue[Int64Value](NewInt64Value(c)), nil
+		return NewConstValue(NewInt64Value(c)), nil
 	default:
 		return nil, fmt.Errorf("constNodeDTO: no mapping specified for type %s", n.Type)
 	}
