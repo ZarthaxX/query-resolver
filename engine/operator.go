@@ -2,17 +2,26 @@ package engine
 
 import "errors"
 
-type OperatorType string
+type ExpressionType string
 
 var (
-	EqualOperatorType OperatorType = "equal_operator"
+	EqualExpressionType ExpressionType = "equal_operator"
 )
 
-type ValueOperator interface {
+type ValueExpression interface {
 	Resolve(e Entity) (ComparableValue, error)
 	IsResolvable(e Entity) bool // call this before Resolve to check if value can be resolvable and avoid errors
-	Visit(visitor OperatorVisitorIntarface)
+	Visit(visitor ExpressionVisitorIntarface)
+	GetFieldName() (FieldName, bool)
 }
+
+type ComparisonExpressionInterface interface {
+	Resolve(e Entity) (bool, error)
+	IsResolvable(e Entity) bool
+	Visit(visitor ExpressionVisitorIntarface)
+}
+
+type QueryExpression = []ComparisonExpressionInterface
 
 type ComparableValue interface {
 	Equal(ComparableValue) (bool, error)
@@ -20,18 +29,18 @@ type ComparableValue interface {
 	Exists() bool
 }
 
-type FieldValue struct {
-	fieldName FieldName
+type FieldValueExpression struct {
+	FieldName FieldName
 }
 
-func NewFieldValue(fieldName FieldName) FieldValue {
-	return FieldValue{
-		fieldName: fieldName,
+func NewFieldValueExpression(fieldName FieldName) FieldValueExpression {
+	return FieldValueExpression{
+		FieldName: fieldName,
 	}
 }
 
-func (o FieldValue) Resolve(e Entity) (res ComparableValue, err error) {
-	v, err := e.SeekField(o.fieldName)
+func (o FieldValueExpression) Resolve(e Entity) (res ComparableValue, err error) {
+	v, err := e.SeekField(o.FieldName)
 	if err != nil {
 		return res, err
 	}
@@ -44,68 +53,70 @@ func (o FieldValue) Resolve(e Entity) (res ComparableValue, err error) {
 	return fv, nil
 }
 
-func (o FieldValue) IsResolvable(e Entity) bool {
-	return e.IsFieldPresent(o.fieldName)
+func (o FieldValueExpression) IsResolvable(e Entity) bool {
+	return e.IsFieldPresent(o.FieldName)
 }
 
-func (o FieldValue) Visit(visitor OperatorVisitorIntarface) {
+func (o FieldValueExpression) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.Field(o)
 }
 
-type ConstValue struct {
+func (o FieldValueExpression) GetFieldName() (FieldName, bool) {
+	return o.FieldName, true
+}
+
+type ConstValueExpression struct {
 	value ComparableValue
 }
 
-func NewConstValue(v ComparableValue) ConstValue {
-	return ConstValue{value: v}
+func NewConstValueExpression(v ComparableValue) ConstValueExpression {
+	return ConstValueExpression{value: v}
 }
 
-func (o ConstValue) Resolve(e Entity) (ComparableValue, error) {
+func (o ConstValueExpression) Resolve(e Entity) (ComparableValue, error) {
 	return o.value, nil
 }
 
-func (o ConstValue) IsResolvable(e Entity) bool {
+func (o ConstValueExpression) IsResolvable(e Entity) bool {
 	return true
 }
 
-func (o ConstValue) Visit(visitor OperatorVisitorIntarface) {
+func (o ConstValueExpression) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.Const(o)
 }
 
-type OperatorVisitorIntarface interface {
-	Equal(EqualOperator)
-	LessThan(LessThanOperator)
-	Const(ConstValue)
-	Field(FieldValue)
+func (o ConstValueExpression) GetFieldName() (FieldName, bool) {
+	return "", false
 }
 
-type ComparisonOperatorInterface interface {
-	Resolve(e Entity) (bool, error)
-	IsResolvable(e Entity) bool
-	Visit(visitor OperatorVisitorIntarface)
+type ExpressionVisitorIntarface interface {
+	Equal(EqualExpression)
+	LessThan(LessThanExpression)
+	Const(ConstValueExpression)
+	Field(FieldValueExpression)
 }
 
 /*
-EqualOperator takes 2 values and returns if their values match
+EqualExpression takes 2 values and returns if their values match
 */
-type EqualOperator struct {
-	a, b ValueOperator
+type EqualExpression struct {
+	A, B ValueExpression
 }
 
-func NewEqualOperator(a, b ValueOperator) *EqualOperator {
-	return &EqualOperator{
-		a: a,
-		b: b,
+func NewEqualExpression(a, b ValueExpression) *EqualExpression {
+	return &EqualExpression{
+		A: a,
+		B: b,
 	}
 }
 
-func (o *EqualOperator) Resolve(e Entity) (bool, error) {
-	va, err := o.a.Resolve(e)
+func (o *EqualExpression) Resolve(e Entity) (bool, error) {
+	va, err := o.A.Resolve(e)
 	if err != nil {
 		return false, err
 	}
 
-	vb, err := o.b.Resolve(e)
+	vb, err := o.B.Resolve(e)
 	if err != nil {
 		return false, err
 	}
@@ -113,38 +124,38 @@ func (o *EqualOperator) Resolve(e Entity) (bool, error) {
 	return va.Equal(vb)
 }
 
-func (o *EqualOperator) IsResolvable(e Entity) bool {
-	return o.a.IsResolvable(e) && o.b.IsResolvable(e)
+func (o *EqualExpression) IsResolvable(e Entity) bool {
+	return o.A.IsResolvable(e) && o.B.IsResolvable(e)
 }
 
-func (o *EqualOperator) Visit(visitor OperatorVisitorIntarface) {
+func (o *EqualExpression) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.Equal(*o)
 
-	o.a.Visit(visitor)
-	o.b.Visit(visitor)
+	o.A.Visit(visitor)
+	o.B.Visit(visitor)
 }
 
 /*
-LessThanOperator takes 2 values and returns if a is less than b
+LessThanExpression takes 2 values and returns if a is less than b
 */
-type LessThanOperator struct {
-	a, b ValueOperator
+type LessThanExpression struct {
+	A, B ValueExpression
 }
 
-func NewLessThanOperator(a, b ValueOperator) *LessThanOperator {
-	return &LessThanOperator{
-		a: a,
-		b: b,
+func NewLessThanExpression(a, b ValueExpression) *LessThanExpression {
+	return &LessThanExpression{
+		A: a,
+		B: b,
 	}
 }
 
-func (o *LessThanOperator) Resolve(e Entity) (bool, error) {
-	va, err := o.a.Resolve(e)
+func (o *LessThanExpression) Resolve(e Entity) (bool, error) {
+	va, err := o.A.Resolve(e)
 	if err != nil {
 		return false, err
 	}
 
-	vb, err := o.b.Resolve(e)
+	vb, err := o.B.Resolve(e)
 	if err != nil {
 		return false, err
 	}
@@ -152,13 +163,13 @@ func (o *LessThanOperator) Resolve(e Entity) (bool, error) {
 	return va.Less(vb)
 }
 
-func (o *LessThanOperator) IsResolvable(e Entity) bool {
-	return o.a.IsResolvable(e) && o.b.IsResolvable(e)
+func (o *LessThanExpression) IsResolvable(e Entity) bool {
+	return o.A.IsResolvable(e) && o.B.IsResolvable(e)
 }
 
-func (o *LessThanOperator) Visit(visitor OperatorVisitorIntarface) {
+func (o *LessThanExpression) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.LessThan(*o)
 
-	o.a.Visit(visitor)
-	o.b.Visit(visitor)
+	o.A.Visit(visitor)
+	o.B.Visit(visitor)
 }

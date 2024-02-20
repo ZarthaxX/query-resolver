@@ -3,7 +3,7 @@ package engine
 type ServiceAmount = PrimitiveValue[int64]
 
 var ServiceAmountName FieldName = "order.service_amount"
-var ServiceAmountField = NewFieldValue(ServiceAmountName)
+var ServiceAmountField = NewFieldValueExpression(ServiceAmountName)
 
 var EmptyServiceAmount = ServiceAmount(NewPrimitiveValue[int64](0, false))
 

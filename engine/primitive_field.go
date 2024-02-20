@@ -38,10 +38,12 @@ func (v PrimitiveValue[T]) Less(o ComparableValue) (bool, error) {
 	return v.value < ov.value, nil
 }
 
+func NewConstValue[T constraints.Ordered](v T) PrimitiveValue[T] {
+	return NewPrimitiveValue[T](v, true)
+}
+
 type Int64Value = PrimitiveValue[int64]
 
 func NewInt64Value(v int64) Int64Value {
-	return Int64Value{
-		value: v,
-	}
+	return NewConstValue[int64](v)
 }

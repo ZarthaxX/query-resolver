@@ -6,7 +6,15 @@ import (
 	"search-engine/engine"
 )
 
+func Expr() engine.ValueExpression {
+	return engine.NewFieldValueExpression(engine.ServiceAmountName)
+}
+
 func main() {
+	value := Expr()
+	v, ok := value.(engine.FieldValueExpression)
+	fmt.Println(v.)
+
 	entity := engine.Entity{
 		engine.ServiceAmountName: engine.NewServiceAmount(10),
 	}
@@ -20,7 +28,7 @@ func main() {
 		panic(err)
 	}
 
-	for _, op := range query{
+	for _, op := range query {
 		fmt.Println(op.Resolve(entity))
 	}
 }
