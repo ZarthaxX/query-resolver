@@ -37,9 +37,9 @@ type fieldNodeDTO struct {
 	Name string `json:"name"`
 }
 
+type valueExpressionRetriever func(name FieldName) (FieldValueExpression, bool)
 
-
-func ParseQuery(rawQuery []byte) ([]ComparisonExpressionInterface, error) {
+func ParseQuery(rawQuery []byte, retriever valueExpressionRetriever) ([]ComparisonExpressionInterface, error) {
 	var root []treeNodeDTO
 	if err := json.Unmarshal(rawQuery, &root); err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func ParseQuery(rawQuery []byte) ([]ComparisonExpressionInterface, error) {
 
 	query := make([]ComparisonExpressionInterface, 0, len(root))
 	for _, e := range root {
-		operators, err := e.parse()
+		operators, err := e.parse(retriever)
 		if err != nil {
 			return nil, err
 		}
@@ -58,27 +58,27 @@ func ParseQuery(rawQuery []byte) ([]ComparisonExpressionInterface, error) {
 	return query, nil
 }
 
-func (n treeNodeDTO) parse() ([]ComparisonExpressionInterface, error) {
+func (n treeNodeDTO) parse(retriever valueExpressionRetriever) ([]ComparisonExpressionInterface, error) {
 	if n.Equal != nil {
-		op, err := n.Equal.parse()
+		op, err := n.Equal.parse(retriever)
 		if err != nil {
 			return nil, err
 		}
 		return []ComparisonExpressionInterface{op}, nil
 	} else if n.Range != nil {
-		return n.Range.parse()
+		return n.Range.parse(retriever)
 	}
 
 	return nil, errors.New("unmapped operator")
 }
 
-func (n equalNodeDTO) parse() (op ComparisonExpressionInterface, err error) {
-	a, err := n.ValueA.parse()
+func (n equalNodeDTO) parse(retriever valueExpressionRetriever) (op ComparisonExpressionInterface, err error) {
+	a, err := n.ValueA.parse(retriever)
 	if err != nil {
 		return nil, err
 	}
 
-	b, err := n.ValueB.parse()
+	b, err := n.ValueB.parse(retriever)
 	if err != nil {
 		return nil, err
 	}
@@ -86,15 +86,15 @@ func (n equalNodeDTO) parse() (op ComparisonExpressionInterface, err error) {
 	return NewEqualExpression(a, b), nil
 }
 
-func (n rangeNodeDTO) parse() (op []ComparisonExpressionInterface, err error) {
-	value, err := n.Value.parse()
+func (n rangeNodeDTO) parse(retriever valueExpressionRetriever) (op []ComparisonExpressionInterface, err error) {
+	value, err := n.Value.parse(retriever)
 	if err != nil {
 		return nil, err
 	}
 
 	operators := []ComparisonExpressionInterface{}
 	if n.From != nil {
-		from, err := n.From.parse()
+		from, err := n.From.parse(retriever)
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +103,7 @@ func (n rangeNodeDTO) parse() (op []ComparisonExpressionInterface, err error) {
 	}
 
 	if n.To != nil {
-		to, err := n.To.parse()
+		to, err := n.To.parse(retriever)
 		if err != nil {
 			return nil, err
 		}
@@ -114,9 +114,9 @@ func (n rangeNodeDTO) parse() (op []ComparisonExpressionInterface, err error) {
 	return operators, nil
 }
 
-func (n valueNodeDTO) parse() (ValueExpression, error) {
+func (n valueNodeDTO) parse(retriever valueExpressionRetriever) (ValueExpression, error) {
 	if n.Field != nil {
-		return n.Field.parse()
+		return n.Field.parse(retriever)
 	} else if n.Const != nil {
 		return n.Const.parse()
 	} else {
@@ -138,11 +138,11 @@ func (n constNodeDTO) parse() (ValueExpression, error) {
 	}
 }
 
-func (n fieldNodeDTO) parse() (ValueExpression, error) {
-	switch n.Name {
-	case ServiceAmountName:
-		return ServiceAmountField, nil
-	default:
+func (n fieldNodeDTO) parse(retrieve valueExpressionRetriever) (ValueExpression, error) {
+	field, ok := retrieve(FieldName(n.Name))
+	if !ok {
 		return nil, fmt.Errorf("fieldNodeDTO: no mapping specified for name %s", n.Name)
 	}
+
+	return field, nil
 }

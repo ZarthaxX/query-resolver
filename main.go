@@ -6,24 +6,25 @@ import (
 	"search-engine/engine"
 )
 
-func Expr() engine.ValueExpression {
-	return engine.NewFieldValueExpression(engine.ServiceAmountName)
+func retrieveFieldExpression(name engine.FieldName) (engine.FieldValueExpression, bool) {
+	switch name {
+	case ServiceAmountName:
+		return ServiceAmountField, true
+	default:
+		return engine.FieldValueExpression{}, false
+	}
 }
 
 func main() {
-	value := Expr()
-	v, ok := value.(engine.FieldValueExpression)
-	fmt.Println(v.)
-
 	entity := engine.Entity{
-		engine.ServiceAmountName: engine.NewServiceAmount(10),
+		ServiceAmountName: NewServiceAmount(10),
 	}
 
 	rawQuery, err := os.ReadFile("query.json")
 	if err != nil {
 		panic(err)
 	}
-	query, err := engine.ParseQuery([]byte(rawQuery))
+	query, err := engine.ParseQuery([]byte(rawQuery),retrieveFieldExpression)
 	if err != nil {
 		panic(err)
 	}

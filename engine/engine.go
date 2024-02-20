@@ -6,7 +6,7 @@ import (
 )
 
 type DataSource interface {
-	Retrieve(query QueryExpression) Entities
+	Retrieve(query QueryExpression) (Entities, bool)
 	Decorate(query QueryExpression, entities Entities) (Entities, bool)
 }
 
@@ -19,14 +19,15 @@ var ErrQueryExpressionUnsolvable = errors.New("query expression is unsolvable")
 
 func (e *Engine) ProcessQuery(ctx context.Context, query QueryExpression) (Entities, error) {
 	var entities Entities
+	var retrieved bool
 	for _, src := range e.sources {
-		entities = src.Retrieve(query)
-		if len(entities) != 0 {
+		entities, retrieved = src.Retrieve(query)
+		if retrieved {
 			break
 		}
 	}
 
-	if len(entities) == 0 {
+	if !retrieved {
 		return nil, ErrQueryExpressionUnsolvable
 	}
 
