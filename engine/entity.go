@@ -4,6 +4,8 @@ import "errors"
 
 type FieldName = string
 
+const EmptyFieldName FieldName = ""
+
 // TODO: tenemos que definir una key para intersecar / unir
 type Entity map[FieldName]any
 

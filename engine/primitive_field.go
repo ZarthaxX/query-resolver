@@ -38,6 +38,10 @@ func (v PrimitiveValue[T]) Less(o ComparableValue) (bool, error) {
 	return v.value < ov.value, nil
 }
 
+func (v PrimitiveValue[T]) Value() any {
+	return v.value
+}
+
 func NewConstValue[T constraints.Ordered](v T) PrimitiveValue[T] {
 	return NewPrimitiveValue[T](v, true)
 }

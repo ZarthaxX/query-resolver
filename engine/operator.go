@@ -12,7 +12,7 @@ type ValueExpression interface {
 	Resolve(e Entity) (ComparableValue, error)
 	IsResolvable(e Entity) bool // call this before Resolve to check if value can be resolvable and avoid errors
 	Visit(visitor ExpressionVisitorIntarface)
-	GetFieldName() (FieldName, bool)
+	GetFieldName() FieldName
 }
 
 type ComparisonExpressionInterface interface {
@@ -21,12 +21,19 @@ type ComparisonExpressionInterface interface {
 	Visit(visitor ExpressionVisitorIntarface)
 }
 
-type QueryExpression = []ComparisonExpressionInterface
+type QueryExpression []ComparisonExpressionInterface
+
+func (e QueryExpression) Visit(visitor ExpressionVisitorIntarface) {
+	for _, expr := range e {
+		expr.Visit(visitor)
+	}
+}
 
 type ComparableValue interface {
 	Equal(ComparableValue) (bool, error)
 	Less(ComparableValue) (bool, error)
 	Exists() bool
+	Value() any
 }
 
 type FieldValueExpression struct {
@@ -61,8 +68,8 @@ func (o FieldValueExpression) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.Field(o)
 }
 
-func (o FieldValueExpression) GetFieldName() (FieldName, bool) {
-	return o.FieldName, true
+func (o FieldValueExpression) GetFieldName() FieldName {
+	return o.FieldName
 }
 
 type ConstValueExpression struct {
@@ -85,8 +92,8 @@ func (o ConstValueExpression) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.Const(o)
 }
 
-func (o ConstValueExpression) GetFieldName() (FieldName, bool) {
-	return "", false
+func (o ConstValueExpression) GetFieldName() FieldName {
+	return EmptyFieldName
 }
 
 type ExpressionVisitorIntarface interface {
