@@ -7,45 +7,45 @@ import (
 	"strconv"
 )
 
-type treeNodeDTO struct {
-	Equal *equalNodeDTO `json:"equal,omitempty"`
-	Range *rangeNodeDTO `json:"range,omitempty"`
+type treeNodeDTO[T ID[T]] struct {
+	Equal *equalNodeDTO[T] `json:"equal,omitempty"`
+	Range *rangeNodeDTO[T] `json:"range,omitempty"`
 }
 
-type equalNodeDTO struct {
-	ValueA valueNodeDTO `json:"value_a"`
-	ValueB valueNodeDTO `json:"value_b"`
+type equalNodeDTO[T ID[T]] struct {
+	ValueA valueNodeDTO[T] `json:"value_a"`
+	ValueB valueNodeDTO[T] `json:"value_b"`
 }
 
-type rangeNodeDTO struct {
-	Value valueNodeDTO  `json:"value"`
-	From  *valueNodeDTO `json:"from,omitempty"`
-	To    *valueNodeDTO `json:"to,omitempty"`
+type rangeNodeDTO[T ID[T]] struct {
+	Value valueNodeDTO[T]  `json:"value"`
+	From  *valueNodeDTO[T] `json:"from,omitempty"`
+	To    *valueNodeDTO[T] `json:"to,omitempty"`
 }
 
-type valueNodeDTO struct {
-	Const *constNodeDTO `json:"const,omitempty"`
-	Field *fieldNodeDTO `json:"field,omitempty"`
+type valueNodeDTO[T ID[T]] struct {
+	Const *constNodeDTO[T] `json:"const,omitempty"`
+	Field *fieldNodeDTO[T] `json:"field,omitempty"`
 }
 
-type constNodeDTO struct {
+type constNodeDTO[T ID[T]] struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
 }
 
-type fieldNodeDTO struct {
+type fieldNodeDTO[T ID[T]] struct {
 	Name string `json:"name"`
 }
 
-type valueExpressionRetriever func(name FieldName) (FieldValueExpression, bool)
+type valueExpressionRetriever[T ID[T]] func(name FieldName) (FieldValueExpression[T], bool)
 
-func ParseQuery(rawQuery []byte, retriever valueExpressionRetriever) ([]ComparisonExpressionInterface, error) {
-	var root []treeNodeDTO
+func ParseQuery[T ID[T]](rawQuery []byte, retriever valueExpressionRetriever[T]) ([]ComparisonExpressionInterface[T], error) {
+	var root []treeNodeDTO[T]
 	if err := json.Unmarshal(rawQuery, &root); err != nil {
 		return nil, err
 	}
 
-	query := make([]ComparisonExpressionInterface, 0, len(root))
+	query := make([]ComparisonExpressionInterface[T], 0, len(root))
 	for _, e := range root {
 		operators, err := e.parse(retriever)
 		if err != nil {
@@ -58,13 +58,13 @@ func ParseQuery(rawQuery []byte, retriever valueExpressionRetriever) ([]Comparis
 	return query, nil
 }
 
-func (n treeNodeDTO) parse(retriever valueExpressionRetriever) ([]ComparisonExpressionInterface, error) {
+func (n treeNodeDTO[T]) parse(retriever valueExpressionRetriever[T]) ([]ComparisonExpressionInterface[T], error) {
 	if n.Equal != nil {
 		op, err := n.Equal.parse(retriever)
 		if err != nil {
 			return nil, err
 		}
-		return []ComparisonExpressionInterface{op}, nil
+		return []ComparisonExpressionInterface[T]{op}, nil
 	} else if n.Range != nil {
 		return n.Range.parse(retriever)
 	}
@@ -72,7 +72,7 @@ func (n treeNodeDTO) parse(retriever valueExpressionRetriever) ([]ComparisonExpr
 	return nil, errors.New("unmapped operator")
 }
 
-func (n equalNodeDTO) parse(retriever valueExpressionRetriever) (op ComparisonExpressionInterface, err error) {
+func (n equalNodeDTO[T]) parse(retriever valueExpressionRetriever[T]) (op ComparisonExpressionInterface[T], err error) {
 	a, err := n.ValueA.parse(retriever)
 	if err != nil {
 		return nil, err
@@ -83,23 +83,23 @@ func (n equalNodeDTO) parse(retriever valueExpressionRetriever) (op ComparisonEx
 		return nil, err
 	}
 
-	return NewEqualExpression(a, b), nil
+	return NewEqualExpression[T](a, b), nil
 }
 
-func (n rangeNodeDTO) parse(retriever valueExpressionRetriever) (op []ComparisonExpressionInterface, err error) {
+func (n rangeNodeDTO[T]) parse(retriever valueExpressionRetriever[T]) (op []ComparisonExpressionInterface[T], err error) {
 	value, err := n.Value.parse(retriever)
 	if err != nil {
 		return nil, err
 	}
 
-	operators := []ComparisonExpressionInterface{}
+	operators := []ComparisonExpressionInterface[T]{}
 	if n.From != nil {
 		from, err := n.From.parse(retriever)
 		if err != nil {
 			return nil, err
 		}
 
-		operators = append(operators, NewLessThanExpression(from, value))
+		operators = append(operators, NewLessThanExpression[T](from, value))
 	}
 
 	if n.To != nil {
@@ -108,13 +108,13 @@ func (n rangeNodeDTO) parse(retriever valueExpressionRetriever) (op []Comparison
 			return nil, err
 		}
 
-		operators = append(operators, NewLessThanExpression(value, to))
+		operators = append(operators, NewLessThanExpression[T](value, to))
 	}
 
 	return operators, nil
 }
 
-func (n valueNodeDTO) parse(retriever valueExpressionRetriever) (ValueExpression, error) {
+func (n valueNodeDTO[T]) parse(retriever valueExpressionRetriever[T]) (ValueExpression[T], error) {
 	if n.Field != nil {
 		return n.Field.parse(retriever)
 	} else if n.Const != nil {
@@ -124,7 +124,7 @@ func (n valueNodeDTO) parse(retriever valueExpressionRetriever) (ValueExpression
 	}
 }
 
-func (n constNodeDTO) parse() (ValueExpression, error) {
+func (n constNodeDTO[T]) parse() (ValueExpression[T], error) {
 	switch n.Type {
 	case "int":
 		c, err := strconv.ParseInt(n.Value, 10, 64)
@@ -132,13 +132,13 @@ func (n constNodeDTO) parse() (ValueExpression, error) {
 			return nil, err
 		}
 
-		return NewConstValueExpression(NewInt64Value(c)), nil
+		return NewConstValueExpression[T](NewInt64Value(c)), nil
 	default:
 		return nil, fmt.Errorf("constNodeDTO: no mapping specified for type %s", n.Type)
 	}
 }
 
-func (n fieldNodeDTO) parse(retrieve valueExpressionRetriever) (ValueExpression, error) {
+func (n fieldNodeDTO[T]) parse(retrieve valueExpressionRetriever[T]) (ValueExpression[T], error) {
 	field, ok := retrieve(FieldName(n.Name))
 	if !ok {
 		return nil, fmt.Errorf("fieldNodeDTO: no mapping specified for name %s", n.Name)

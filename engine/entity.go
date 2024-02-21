@@ -6,11 +6,25 @@ type FieldName = string
 
 const EmptyFieldName FieldName = ""
 
-// TODO: tenemos que definir una key para intersecar / unir
-type Entity map[FieldName]any
+type ID[T any] interface {
+	Equal(id T) bool
+}
 
-func (e Entity) SeekField(f FieldName) (any, error) {
-	ef, ok := e[FieldName(f)]
+// TODO: tenemos que definir una key para intersecar / unir
+type Entity[T ID[T]] struct {
+	id     ID[T]
+	fields map[FieldName]any
+}
+
+func NewEntity[T ID[T]](id T) Entity[T] {
+	return Entity[T]{
+		id:     id,
+		fields: make(map[FieldName]any),
+	}
+}
+
+func (e Entity[T]) SeekField(f FieldName) (any, error) {
+	ef, ok := e.fields[FieldName(f)]
 	if !ok {
 		return nil, errors.New("field does not exist")
 	}
@@ -18,13 +32,18 @@ func (e Entity) SeekField(f FieldName) (any, error) {
 	return ef, nil
 }
 
-func (e Entity) IsFieldPresent(f FieldName) bool {
-	_, ok := e[FieldName(f)]
+func (e Entity[T]) IsFieldPresent(f FieldName) bool {
+	_, ok := e.fields[FieldName(f)]
 	return ok
 }
 
-func (e Entity) AddField(name FieldName, value any) {
-	e[name] = value
+func (e *Entity[T]) AddField(name FieldName, value any) {
+	e.fields[name] = value
 }
 
-type Entities []Entity
+type Entities[T ID[T]] []Entity[T]
+
+func (e Entities[T]) Merge(Entities[T]) Entities[T] {
+	// TODO: code me
+	return nil
+}

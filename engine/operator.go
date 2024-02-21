@@ -8,116 +8,80 @@ var (
 	EqualExpressionType ExpressionType = "equal_operator"
 )
 
-type ValueExpression interface {
-	Resolve(e Entity) (ComparableValue, error)
-	IsResolvable(e Entity) bool // call this before Resolve to check if value can be resolvable and avoid errors
-	Visit(visitor ExpressionVisitorIntarface)
+type ValueExpression[T ID[T]] interface {
+	Resolve(e Entity[T]) (ComparableValue, error)
+	IsResolvable(e Entity[T]) bool // call this before Resolve to check if value can be resolvable and avoid errors
+	Visit(visitor ExpressionVisitorIntarface[T])
 	GetFieldName() FieldName
 }
 
-type ComparisonExpressionInterface interface {
-	Resolve(e Entity) (bool, error)
-	IsResolvable(e Entity) bool
-	Visit(visitor ExpressionVisitorIntarface)
+type ComparisonExpressionInterface[T ID[T]] interface {
+	Resolve(e Entity[T]) (bool, error)
+	IsResolvable(e Entity[T]) bool
+	Visit(visitor ExpressionVisitorIntarface[T])
 }
 
-type QueryExpression []ComparisonExpressionInterface
+type QueryExpression[T ID[T]] []ComparisonExpressionInterface[T]
 
-func (e QueryExpression) Visit(visitor ExpressionVisitorIntarface) {
+func (e QueryExpression[T]) Visit(visitor ExpressionVisitorIntarface[T]) {
 	for _, expr := range e {
 		expr.Visit(visitor)
 	}
 }
 
-type ComparableValue interface {
-	Equal(ComparableValue) (bool, error)
-	Less(ComparableValue) (bool, error)
-	Exists() bool
-	Value() any
+type ExpressionVisitorIntarface[T ID[T]] interface {
+	Exists(ExistsExpression[T])
+	Equal(EqualExpression[T])
+	LessThan(LessThanExpression[T])
+	Const(ConstValueExpression[T])
+	Field(FieldValueExpression[T])
 }
 
-type FieldValueExpression struct {
-	FieldName FieldName
+/*
+ExistsExpression takes a value and returns if it exists
+*/
+type ExistsExpression[T ID[T]] struct {
+	A ValueExpression[T]
 }
 
-func NewFieldValueExpression(fieldName FieldName) FieldValueExpression {
-	return FieldValueExpression{
-		FieldName: fieldName,
+func NewExistsExpression[T ID[T]](a ValueExpression[T]) *ExistsExpression[T] {
+	return &ExistsExpression[T]{
+		A: a,
 	}
 }
 
-func (o FieldValueExpression) Resolve(e Entity) (res ComparableValue, err error) {
-	v, err := e.SeekField(o.FieldName)
+func (o *ExistsExpression[T]) Resolve(e Entity[T]) (bool, error) {
+	va, err := o.A.Resolve(e)
 	if err != nil {
-		return res, err
+		return false, err
 	}
 
-	fv, ok := v.(ComparableValue)
-	if !ok {
-		return res, errors.New("type does not match")
-	}
-
-	return fv, nil
+	return va.Exists(), nil
 }
 
-func (o FieldValueExpression) IsResolvable(e Entity) bool {
-	return e.IsFieldPresent(o.FieldName)
+func (o *ExistsExpression[T]) IsResolvable(e Entity[T]) bool {
+	return o.A.IsResolvable(e)
 }
 
-func (o FieldValueExpression) Visit(visitor ExpressionVisitorIntarface) {
-	visitor.Field(o)
-}
-
-func (o FieldValueExpression) GetFieldName() FieldName {
-	return o.FieldName
-}
-
-type ConstValueExpression struct {
-	value ComparableValue
-}
-
-func NewConstValueExpression(v ComparableValue) ConstValueExpression {
-	return ConstValueExpression{value: v}
-}
-
-func (o ConstValueExpression) Resolve(e Entity) (ComparableValue, error) {
-	return o.value, nil
-}
-
-func (o ConstValueExpression) IsResolvable(e Entity) bool {
-	return true
-}
-
-func (o ConstValueExpression) Visit(visitor ExpressionVisitorIntarface) {
-	visitor.Const(o)
-}
-
-func (o ConstValueExpression) GetFieldName() FieldName {
-	return EmptyFieldName
-}
-
-type ExpressionVisitorIntarface interface {
-	Equal(EqualExpression)
-	LessThan(LessThanExpression)
-	Const(ConstValueExpression)
-	Field(FieldValueExpression)
+func (o *ExistsExpression[T]) Visit(visitor ExpressionVisitorIntarface[T]) {
+	visitor.Exists(*o)
 }
 
 /*
 EqualExpression takes 2 values and returns if their values match
 */
-type EqualExpression struct {
-	A, B ValueExpression
+type EqualExpression[T ID[T]] struct {
+	A, B ValueExpression[T]
 }
 
-func NewEqualExpression(a, b ValueExpression) *EqualExpression {
-	return &EqualExpression{
+func NewEqualExpression[T ID[T]](a, b ValueExpression[T]) *EqualExpression[T] {
+	return &EqualExpression[T]{
 		A: a,
 		B: b,
 	}
 }
 
-func (o *EqualExpression) Resolve(e Entity) (bool, error) {
+func (o *EqualExpression[T]) Resolve(e Entity[T]) (bool, error) {
 	va, err := o.A.Resolve(e)
 	if err != nil {
 		return false, err
@@ -131,11 +95,11 @@ func (o *EqualExpression) Resolve(e Entity) (bool, error) {
 	return va.Equal(vb)
 }
 
-func (o *EqualExpression) IsResolvable(e Entity) bool {
+func (o *EqualExpression[T]) IsResolvable(e Entity[T]) bool {
 	return o.A.IsResolvable(e) && o.B.IsResolvable(e)
 }
 
-func (o *EqualExpression) Visit(visitor ExpressionVisitorIntarface) {
+func (o *EqualExpression[T]) Visit(visitor ExpressionVisitorIntarface[T]) {
 	visitor.Equal(*o)
 
 	o.A.Visit(visitor)
@@ -145,18 +109,18 @@ func (o *EqualExpression) Visit(visitor ExpressionVisitorIntarface) {
 /*
 LessThanExpression takes 2 values and returns if a is less than b
 */
-type LessThanExpression struct {
-	A, B ValueExpression
+type LessThanExpression[T ID[T]] struct {
+	A, B ValueExpression[T]
 }
 
-func NewLessThanExpression(a, b ValueExpression) *LessThanExpression {
-	return &LessThanExpression{
+func NewLessThanExpression[T ID[T]](a, b ValueExpression[T]) *LessThanExpression[T] {
+	return &LessThanExpression[T]{
 		A: a,
 		B: b,
 	}
 }
 
-func (o *LessThanExpression) Resolve(e Entity) (bool, error) {
+func (o *LessThanExpression[T]) Resolve(e Entity[T]) (bool, error) {
 	va, err := o.A.Resolve(e)
 	if err != nil {
 		return false, err
@@ -170,13 +134,80 @@ func (o *LessThanExpression) Resolve(e Entity) (bool, error) {
 	return va.Less(vb)
 }
 
-func (o *LessThanExpression) IsResolvable(e Entity) bool {
+func (o *LessThanExpression[T]) IsResolvable(e Entity[T]) bool {
 	return o.A.IsResolvable(e) && o.B.IsResolvable(e)
 }
 
-func (o *LessThanExpression) Visit(visitor ExpressionVisitorIntarface) {
+func (o *LessThanExpression[T]) Visit(visitor ExpressionVisitorIntarface[T]) {
 	visitor.LessThan(*o)
 
 	o.A.Visit(visitor)
 	o.B.Visit(visitor)
+}
+
+type ComparableValue interface {
+	Equal(ComparableValue) (bool, error)
+	Less(ComparableValue) (bool, error)
+	Exists() bool
+	Value() any
+}
+
+type FieldValueExpression[T ID[T]] struct {
+	FieldName FieldName
+}
+
+func NewFieldValueExpression[T ID[T]](fieldName FieldName) FieldValueExpression[T] {
+	return FieldValueExpression[T]{
+		FieldName: fieldName,
+	}
+}
+
+func (o FieldValueExpression[T]) Resolve(e Entity[T]) (res ComparableValue, err error) {
+	v, err := e.SeekField(o.FieldName)
+	if err != nil {
+		return res, err
+	}
+
+	fv, ok := v.(ComparableValue)
+	if !ok {
+		return res, errors.New("type does not match")
+	}
+
+	return fv, nil
+}
+
+func (o FieldValueExpression[T]) IsResolvable(e Entity[T]) bool {
+	return e.IsFieldPresent(o.FieldName)
+}
+
+func (o FieldValueExpression[T]) Visit(visitor ExpressionVisitorIntarface[T]) {
+	visitor.Field(o)
+}
+
+func (o FieldValueExpression[T]) GetFieldName() FieldName {
+	return o.FieldName
+}
+
+type ConstValueExpression[T ID[T]] struct {
+	value ComparableValue
+}
+
+func NewConstValueExpression[T ID[T]](v ComparableValue) ConstValueExpression[T] {
+	return ConstValueExpression[T]{value: v}
+}
+
+func (o ConstValueExpression[T]) Resolve(e Entity[T]) (ComparableValue, error) {
+	return o.value, nil
+}
+
+func (o ConstValueExpression[T]) IsResolvable(e Entity[T]) bool {
+	return true
+}
+
+func (o ConstValueExpression[T]) Visit(visitor ExpressionVisitorIntarface[T]) {
+	visitor.Const(o)
+}
+
+func (o ConstValueExpression[T]) GetFieldName() FieldName {
+	return EmptyFieldName
 }

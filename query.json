@@ -1,50 +1,5 @@
 [
     {
-        "equal": {
-            "value_a": {
-                "const": {
-                    "type": "int",
-                    "value": "10"
-                }
-            },
-            "value_b": {
-                "field": {
-                    "name": "order.service_amount"
-                }
-            }
-        }
-    },
-    {
-        "equal": {
-            "value_a": {
-                "const": {
-                    "type": "int",
-                    "value": "10"
-                }
-            },
-            "value_b":  {
-                "const": {
-                    "type": "int",
-                    "value": "4"
-                }
-            }
-        }
-    },
-    {
-        "equal": {
-            "value_a": {
-                "field": {
-                    "name": "order.service_amount"
-                }
-            },
-            "value_b": {
-                "field": {
-                    "name": "order.service_amount"
-                }
-            }
-        }
-    },
-    {
         "range": {
             "value": {
                 "field": {
@@ -54,13 +9,28 @@
             "from": {
                 "const": {
                     "type": "int",
-                    "value": "8"
+                    "value": "1"
                 }
             },
             "to": {
                 "const": {
                     "type": "int",
-                    "value": "7"
+                    "value": "12"
+                }
+            }
+        }
+    },
+    {
+        "equal": {
+            "value_a": {
+                "const": {
+                    "type": "int",
+                    "value": "10"
+                }
+            },
+            "value_b": {
+                "field": {
+                    "name": "order.service_amount"
                 }
             }
         }

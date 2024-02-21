@@ -5,20 +5,25 @@ import (
 	"errors"
 )
 
-type DataSource interface {
-	Retrieve(query QueryExpression) (Entities, bool)
-	Decorate(query QueryExpression, entities Entities) (Entities, bool)
-}
-
-type Engine struct {
-	sources []DataSource
-}
-
 var ErrQueryExpressionPartiallySolvable = errors.New("query expression was partially solved")
 var ErrQueryExpressionUnsolvable = errors.New("query expression is unsolvable")
 
-func (e *Engine) ProcessQuery(ctx context.Context, query QueryExpression) (Entities, error) {
-	var entities Entities
+type DataSource[T ID[T]] interface {
+	Retrieve(query QueryExpression[T]) (Entities[T], bool)
+	Decorate(query QueryExpression[T], entities Entities[T]) (Entities[T], bool) // TODO: think of a better name
+	RetrievableFields() []FieldName
+}
+
+type ExpressionResolver[T ID[T]] struct {
+	sources []DataSource[T]
+}
+
+func NewExpressionResolver[T ID[T]](sources []DataSource[T]) *ExpressionResolver[T] {
+	return &ExpressionResolver[T]{sources: sources}
+}
+
+func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExpression[T]) (Entities[T], error) {
+	var entities Entities[T]
 	var retrieved bool
 	for _, src := range e.sources {
 		entities, retrieved = src.Retrieve(query)
@@ -48,12 +53,13 @@ func (e *Engine) ProcessQuery(ctx context.Context, query QueryExpression) (Entit
 	return entities, nil
 }
 
-func (e *Engine) decorateEntities(query QueryExpression, entities Entities) (Entities, bool) {
+func (e *ExpressionResolver[T]) decorateEntities(query QueryExpression[T], entities Entities[T]) (Entities[T], bool) {
 	var decorated bool
 	for _, src := range e.sources {
 		decoratedEntities, ok := src.Decorate(query, entities)
+		 
 		if ok {
-			entities = decoratedEntities
+			entities = entities.Merge(decoratedEntities)
 			decorated = true
 		}
 	}
@@ -61,15 +67,15 @@ func (e *Engine) decorateEntities(query QueryExpression, entities Entities) (Ent
 	return entities, decorated
 }
 
-func (e *Engine) applyQuery(query QueryExpression, entities Entities) (QueryExpression, Entities, error) {
-	newQuery := QueryExpression{}
+func (e *ExpressionResolver[T]) applyQuery(query QueryExpression[T], entities Entities[T]) (QueryExpression[T], Entities[T], error) {
+	newQuery := QueryExpression[T]{}
 	for _, operator := range query {
 		if !operator.IsResolvable(entities[0]) {
 			newQuery = append(newQuery, operator)
 		}
 	}
 
-	newEntities := Entities{}
+	newEntities := Entities[T]{}
 	// we filter entities that do not apply for some operator
 	for _, e := range entities {
 		var filterEntity bool

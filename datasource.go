@@ -2,69 +2,79 @@ package main
 
 import "search-engine/engine"
 
-type OrderDataSource struct {
-}
+var EmptyEntity = engine.Entity[OrderID]{}
 
 type OrderVisitor struct {
 	serviceAmountFrom, serviceAmountTo *int64
 }
 
-func (v *OrderVisitor) Equal(e engine.EqualExpression) {
+func (v *OrderVisitor) Exists(e engine.ExistsExpression[OrderID]) {
+}
+
+func (v *OrderVisitor) Equal(e engine.EqualExpression[OrderID]) {
 	fa := e.A.GetFieldName()
 	fb := e.B.GetFieldName()
 	if fa != ServiceAmountName && fb != ServiceAmountName {
 		return
 	}
 
-	if e.A.IsResolvable(nil) && fb != engine.EmptyFieldName {
-		ra, _ := e.A.Resolve(nil)
+	if e.A.IsResolvable(EmptyEntity) && fb != engine.EmptyFieldName {
+		ra, _ := e.A.Resolve(EmptyEntity)
 		va, _ := ra.Value().(int64)
 		v.serviceAmountFrom = &va
 		v.serviceAmountTo = &va
 	}
 
-	if e.B.IsResolvable(nil) && fa != engine.EmptyFieldName {
-		rb, _ := e.B.Resolve(nil)
+	if e.B.IsResolvable(EmptyEntity) && fa != engine.EmptyFieldName {
+		rb, _ := e.B.Resolve(EmptyEntity)
 		vb, _ := rb.Value().(int64)
 		v.serviceAmountFrom = &vb
 		v.serviceAmountTo = &vb
 	}
 }
 
-func (v *OrderVisitor) LessThan(e engine.LessThanExpression) {
+func (v *OrderVisitor) LessThan(e engine.LessThanExpression[OrderID]) {
 	fa := e.A.GetFieldName()
 	fb := e.B.GetFieldName()
 	if fa != ServiceAmountName && fb != ServiceAmountName {
 		return
 	}
 
-	if e.A.IsResolvable(nil) && fb != engine.EmptyFieldName {
-		ra, _ := e.A.Resolve(nil)
+	if e.A.IsResolvable(EmptyEntity) && fb != engine.EmptyFieldName {
+		ra, _ := e.A.Resolve(EmptyEntity)
 		va, _ := ra.Value().(int64)
 		v.serviceAmountFrom = &va
 	}
 
-	if e.B.IsResolvable(nil) && fa != engine.EmptyFieldName {
-		rb, _ := e.B.Resolve(nil)
+	if e.B.IsResolvable(EmptyEntity) && fa != engine.EmptyFieldName {
+		rb, _ := e.B.Resolve(EmptyEntity)
 		vb, _ := rb.Value().(int64)
 		v.serviceAmountTo = &vb
 	}
 }
 
-func (v *OrderVisitor) Const(e engine.ConstValueExpression) {
+func (v *OrderVisitor) Const(e engine.ConstValueExpression[OrderID]) {
 
 }
 
-func (v *OrderVisitor) Field(e engine.FieldValueExpression) {
+func (v *OrderVisitor) Field(e engine.FieldValueExpression[OrderID]) {
 
 }
 
-func (s OrderDataSource) Retrieve(query engine.QueryExpression) (engine.Entities, bool) {
+type OrderDataSource struct {
+}
+
+func (s OrderDataSource) RetrievableFields() []engine.FieldName {
+	return []engine.FieldName{ServiceAmountName}
+}
+
+func (s OrderDataSource) Retrieve(query engine.QueryExpression[OrderID]) (engine.Entities[OrderID], bool) {
 	ov := &OrderVisitor{}
 	query.Visit(ov)
+
 	return nil, false
 }
 
-func (s OrderDataSource) Decorate(query engine.QueryExpression, entities engine.Entities) (engine.Entities, bool) {
+func (s OrderDataSource) Decorate(query engine.QueryExpression[OrderID], entities engine.Entities[OrderID]) (engine.Entities[OrderID], bool) {
 	return nil, false
 }
