@@ -13,8 +13,15 @@ type ServiceAmount = engine.PrimitiveValue[int64]
 var ServiceAmountName engine.FieldName = "order.service_amount"
 var ServiceAmountField = engine.NewFieldValueExpression[OrderID](ServiceAmountName)
 
-var EmptyServiceAmount = ServiceAmount(engine.NewPrimitiveValue[int64](0, false))
-
 func NewServiceAmount(v int64) ServiceAmount {
-	return engine.NewPrimitiveValue[int64](v, true)
+	return engine.NewPrimitiveValue[int64](v)
+}
+
+type OrderStatus = engine.PrimitiveValue[string]
+
+var OrderStatusName engine.FieldName = "order.status"
+var OrderStatusField = engine.NewFieldValueExpression[OrderID](OrderStatusName)
+
+func NewOrderStatus(v string) OrderStatus {
+	return engine.NewPrimitiveValue[string](v)
 }

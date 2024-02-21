@@ -65,7 +65,7 @@ type OrderDataSource struct {
 }
 
 func (s OrderDataSource) RetrievableFields() []engine.FieldName {
-	return []engine.FieldName{ServiceAmountName}
+	return []engine.FieldName{ServiceAmountName, OrderStatusName}
 }
 
 func (s OrderDataSource) Retrieve(query engine.QueryExpression[OrderID]) (engine.Entities[OrderID], bool) {
@@ -75,6 +75,7 @@ func (s OrderDataSource) Retrieve(query engine.QueryExpression[OrderID]) (engine
 	id1 := OrderID("order_1")
 	e1 := engine.NewEntity(id1)
 	e1.AddField(ServiceAmountName, NewServiceAmount(10))
+	e1.AddField(OrderStatusName, NewOrderStatus("open"))
 	return engine.Entities[OrderID]{id1: e1}, true
 }
 

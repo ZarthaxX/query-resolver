@@ -6,48 +6,92 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type PrimitiveValue[T constraints.Ordered] struct {
-	value  T
-	exists bool
+type TruthValue string
+
+const (
+	True      TruthValue = "true"
+	False     TruthValue = "false"
+	Undefined TruthValue = "undefined"
+)
+
+func truthValueFromBool(b bool) TruthValue {
+	if b {
+		return True
+	} else {
+		return False
+	}
 }
 
-func NewPrimitiveValue[T constraints.Ordered](v T, exists bool) PrimitiveValue[T] {
+type UndefinedValue struct{}
+
+func (v UndefinedValue) Exists() bool {
+	return false
+}
+
+func (v UndefinedValue) Equal(o ComparableValue) (TruthValue, error) {
+	return Undefined, nil
+}
+
+func (v UndefinedValue) Less(o ComparableValue) (TruthValue, error) {
+	return Undefined, nil
+}
+
+func (v UndefinedValue) Value() any {
+	return nil
+}
+
+type PrimitiveValue[T constraints.Ordered] struct {
+	value T
+}
+
+func NewPrimitiveValue[T constraints.Ordered](v T) PrimitiveValue[T] {
 	return PrimitiveValue[T]{
-		value:  v,
-		exists: exists,
+		value: v,
 	}
 }
 
 func (v PrimitiveValue[T]) Exists() bool {
-	return v.exists
+	return true
 }
 
-func (v PrimitiveValue[T]) Equal(o ComparableValue) (bool, error) {
+func (v PrimitiveValue[T]) Equal(o ComparableValue) (TruthValue, error) {
 	ov, ok := o.(PrimitiveValue[T])
 	if !ok {
-		return false, errors.New("invalid type")
+		return False, errors.New("invalid type")
 	}
-	return v.value == ov.value, nil
+
+	if !v.Exists() || !o.Exists() {
+		return Undefined, nil
+	}
+
+	return truthValueFromBool(v.value == ov.value), nil
 }
 
-func (v PrimitiveValue[T]) Less(o ComparableValue) (bool, error) {
+func (v PrimitiveValue[T]) Less(o ComparableValue) (TruthValue, error) {
 	ov, ok := o.(PrimitiveValue[T])
 	if !ok {
-		return false, errors.New("invalid type")
+		return False, errors.New("invalid type")
 	}
-	return v.value < ov.value, nil
+
+	if !o.Exists() {
+		return Undefined, nil
+	}
+
+	return truthValueFromBool(v.value < ov.value), nil
 }
 
 func (v PrimitiveValue[T]) Value() any {
 	return v.value
 }
 
-func NewConstValue[T constraints.Ordered](v T) PrimitiveValue[T] {
-	return NewPrimitiveValue[T](v, true)
-}
-
 type Int64Value = PrimitiveValue[int64]
 
 func NewInt64Value(v int64) Int64Value {
-	return NewConstValue[int64](v)
+	return NewPrimitiveValue[int64](v)
+}
+
+type StringValue = PrimitiveValue[string]
+
+func NewStringValue(v string) StringValue {
+	return NewPrimitiveValue[string](v)
 }

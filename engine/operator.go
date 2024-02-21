@@ -16,7 +16,7 @@ type ValueExpression[T comparable] interface {
 }
 
 type ComparisonExpressionInterface[T comparable] interface {
-	Resolve(e Entity[T]) (bool, error)
+	Resolve(e Entity[T]) (TruthValue, error)
 	IsResolvable(e Entity[T]) bool
 	Visit(visitor ExpressionVisitorIntarface[T])
 }
@@ -50,13 +50,13 @@ func NewExistsExpression[T comparable](a ValueExpression[T]) *ExistsExpression[T
 	}
 }
 
-func (o *ExistsExpression[T]) Resolve(e Entity[T]) (bool, error) {
+func (o *ExistsExpression[T]) Resolve(e Entity[T]) (TruthValue, error) {
 	va, err := o.A.Resolve(e)
 	if err != nil {
-		return false, err
+		return False, err
 	}
 
-	return va.Exists(), nil
+	return va.Equal(va)
 }
 
 func (o *ExistsExpression[T]) IsResolvable(e Entity[T]) bool {
@@ -81,15 +81,15 @@ func NewEqualExpression[T comparable](a, b ValueExpression[T]) *EqualExpression[
 	}
 }
 
-func (o *EqualExpression[T]) Resolve(e Entity[T]) (bool, error) {
+func (o *EqualExpression[T]) Resolve(e Entity[T]) (TruthValue, error) {
 	va, err := o.A.Resolve(e)
 	if err != nil {
-		return false, err
+		return False, err
 	}
 
 	vb, err := o.B.Resolve(e)
 	if err != nil {
-		return false, err
+		return False, err
 	}
 
 	return va.Equal(vb)
@@ -120,15 +120,15 @@ func NewLessThanExpression[T comparable](a, b ValueExpression[T]) *LessThanExpre
 	}
 }
 
-func (o *LessThanExpression[T]) Resolve(e Entity[T]) (bool, error) {
+func (o *LessThanExpression[T]) Resolve(e Entity[T]) (TruthValue, error) {
 	va, err := o.A.Resolve(e)
 	if err != nil {
-		return false, err
+		return False, err
 	}
 
 	vb, err := o.B.Resolve(e)
 	if err != nil {
-		return false, err
+		return False, err
 	}
 
 	return va.Less(vb)
@@ -145,17 +145,9 @@ func (o *LessThanExpression[T]) Visit(visitor ExpressionVisitorIntarface[T]) {
 	o.B.Visit(visitor)
 }
 
-type Bool string
-
-const (
-	True      Bool = "true"
-	False     Bool = "false"
-	Undefined Bool = "undefined"
-)
-
 type ComparableValue interface {
-	Equal(ComparableValue) (bool, error)
-	Less(ComparableValue) (bool, error)
+	Equal(ComparableValue) (TruthValue, error)
+	Less(ComparableValue) (TruthValue, error)
 	Exists() bool
 	Value() any
 }

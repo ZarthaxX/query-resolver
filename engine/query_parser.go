@@ -131,8 +131,9 @@ func (n constNodeDTO[T]) parse() (ValueExpression[T], error) {
 		if err != nil {
 			return nil, err
 		}
-
 		return NewConstValueExpression[T](NewInt64Value(c)), nil
+	case "string":
+		return NewConstValueExpression[T](NewStringValue(n.Value)), nil
 	default:
 		return nil, fmt.Errorf("constNodeDTO: no mapping specified for type %s", n.Type)
 	}

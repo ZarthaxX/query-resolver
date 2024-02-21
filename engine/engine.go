@@ -17,12 +17,11 @@ type DataSource[T comparable] interface {
 }
 
 type ExpressionResolver[T comparable] struct {
-	sources     []DataSource[T]
-	emptyFields map[FieldName]ComparableValue
+	sources []DataSource[T]
 }
 
-func NewExpressionResolver[T comparable](sources []DataSource[T], emptyFields map[FieldName]ComparableValue) *ExpressionResolver[T] {
-	return &ExpressionResolver[T]{sources: sources, emptyFields: emptyFields}
+func NewExpressionResolver[T comparable](sources []DataSource[T]) *ExpressionResolver[T] {
+	return &ExpressionResolver[T]{sources: sources}
 }
 
 func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExpression[T]) (Entities[T], error) {
@@ -86,11 +85,7 @@ func (e *ExpressionResolver[T]) decorateEntities(query QueryExpression[T], entit
 					continue
 				}
 
-				ef, ok := e.emptyFields[f] // TODO: podemos verificar esto al crear el resolver, comparando todos los field names de los sources a ver si existen en este map
-				if !ok {
-					panic(errors.New("unmapped field name"))
-				}
-				entity.AddField(f, ef)
+				entity.AddField(f, UndefinedValue{})
 			}
 
 			entities[id] = entity
@@ -121,7 +116,9 @@ func (e *ExpressionResolver[T]) applyQuery(query QueryExpression[T], entities En
 				if err != nil {
 					return nil, nil, err
 				}
-				if !ok {
+
+				// If we got UNDEFINED or FALSE, then this entity does not apply
+				if ok != True {
 					filterEntity = true
 					break
 				}

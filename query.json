@@ -34,5 +34,20 @@
                 }
             }
         }
+    },
+    {
+        "equal": {
+            "value_a": {
+                "const": {
+                    "type": "string",
+                    "value": "closed"
+                }
+            },
+            "value_b": {
+                "field": {
+                    "name": "order.status"
+                }
+            }
+        }
     }
 ]
