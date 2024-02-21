@@ -7,39 +7,39 @@ import (
 	"strconv"
 )
 
-type treeNodeDTO[T ID[T]] struct {
+type treeNodeDTO[T comparable] struct {
 	Equal *equalNodeDTO[T] `json:"equal,omitempty"`
 	Range *rangeNodeDTO[T] `json:"range,omitempty"`
 }
 
-type equalNodeDTO[T ID[T]] struct {
+type equalNodeDTO[T comparable] struct {
 	ValueA valueNodeDTO[T] `json:"value_a"`
 	ValueB valueNodeDTO[T] `json:"value_b"`
 }
 
-type rangeNodeDTO[T ID[T]] struct {
+type rangeNodeDTO[T comparable] struct {
 	Value valueNodeDTO[T]  `json:"value"`
 	From  *valueNodeDTO[T] `json:"from,omitempty"`
 	To    *valueNodeDTO[T] `json:"to,omitempty"`
 }
 
-type valueNodeDTO[T ID[T]] struct {
+type valueNodeDTO[T comparable] struct {
 	Const *constNodeDTO[T] `json:"const,omitempty"`
 	Field *fieldNodeDTO[T] `json:"field,omitempty"`
 }
 
-type constNodeDTO[T ID[T]] struct {
+type constNodeDTO[T comparable] struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
 }
 
-type fieldNodeDTO[T ID[T]] struct {
+type fieldNodeDTO[T comparable] struct {
 	Name string `json:"name"`
 }
 
-type valueExpressionRetriever[T ID[T]] func(name FieldName) (FieldValueExpression[T], bool)
+type valueExpressionRetriever[T comparable] func(name FieldName) (FieldValueExpression[T], bool)
 
-func ParseQuery[T ID[T]](rawQuery []byte, retriever valueExpressionRetriever[T]) ([]ComparisonExpressionInterface[T], error) {
+func ParseQuery[T comparable](rawQuery []byte, retriever valueExpressionRetriever[T]) ([]ComparisonExpressionInterface[T], error) {
 	var root []treeNodeDTO[T]
 	if err := json.Unmarshal(rawQuery, &root); err != nil {
 		return nil, err

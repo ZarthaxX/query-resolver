@@ -48,7 +48,7 @@ func main() {
 		OrderDataSource{},
 	}
 
-	resolver := engine.NewExpressionResolver(sources)
+	resolver := engine.NewExpressionResolver(sources, map[engine.FieldName]engine.ComparableValue{ServiceAmountName: EmptyServiceAmount})
 
 	entities, err := resolver.ProcessQuery(context.TODO(), query)
 	fmt.Println(entities)

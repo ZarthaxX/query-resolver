@@ -8,20 +8,20 @@ var (
 	EqualExpressionType ExpressionType = "equal_operator"
 )
 
-type ValueExpression[T ID[T]] interface {
+type ValueExpression[T comparable] interface {
 	Resolve(e Entity[T]) (ComparableValue, error)
 	IsResolvable(e Entity[T]) bool // call this before Resolve to check if value can be resolvable and avoid errors
 	Visit(visitor ExpressionVisitorIntarface[T])
 	GetFieldName() FieldName
 }
 
-type ComparisonExpressionInterface[T ID[T]] interface {
+type ComparisonExpressionInterface[T comparable] interface {
 	Resolve(e Entity[T]) (bool, error)
 	IsResolvable(e Entity[T]) bool
 	Visit(visitor ExpressionVisitorIntarface[T])
 }
 
-type QueryExpression[T ID[T]] []ComparisonExpressionInterface[T]
+type QueryExpression[T comparable] []ComparisonExpressionInterface[T]
 
 func (e QueryExpression[T]) Visit(visitor ExpressionVisitorIntarface[T]) {
 	for _, expr := range e {
@@ -29,7 +29,7 @@ func (e QueryExpression[T]) Visit(visitor ExpressionVisitorIntarface[T]) {
 	}
 }
 
-type ExpressionVisitorIntarface[T ID[T]] interface {
+type ExpressionVisitorIntarface[T comparable] interface {
 	Exists(ExistsExpression[T])
 	Equal(EqualExpression[T])
 	LessThan(LessThanExpression[T])
@@ -40,11 +40,11 @@ type ExpressionVisitorIntarface[T ID[T]] interface {
 /*
 ExistsExpression takes a value and returns if it exists
 */
-type ExistsExpression[T ID[T]] struct {
+type ExistsExpression[T comparable] struct {
 	A ValueExpression[T]
 }
 
-func NewExistsExpression[T ID[T]](a ValueExpression[T]) *ExistsExpression[T] {
+func NewExistsExpression[T comparable](a ValueExpression[T]) *ExistsExpression[T] {
 	return &ExistsExpression[T]{
 		A: a,
 	}
@@ -70,11 +70,11 @@ func (o *ExistsExpression[T]) Visit(visitor ExpressionVisitorIntarface[T]) {
 /*
 EqualExpression takes 2 values and returns if their values match
 */
-type EqualExpression[T ID[T]] struct {
+type EqualExpression[T comparable] struct {
 	A, B ValueExpression[T]
 }
 
-func NewEqualExpression[T ID[T]](a, b ValueExpression[T]) *EqualExpression[T] {
+func NewEqualExpression[T comparable](a, b ValueExpression[T]) *EqualExpression[T] {
 	return &EqualExpression[T]{
 		A: a,
 		B: b,
@@ -109,11 +109,11 @@ func (o *EqualExpression[T]) Visit(visitor ExpressionVisitorIntarface[T]) {
 /*
 LessThanExpression takes 2 values and returns if a is less than b
 */
-type LessThanExpression[T ID[T]] struct {
+type LessThanExpression[T comparable] struct {
 	A, B ValueExpression[T]
 }
 
-func NewLessThanExpression[T ID[T]](a, b ValueExpression[T]) *LessThanExpression[T] {
+func NewLessThanExpression[T comparable](a, b ValueExpression[T]) *LessThanExpression[T] {
 	return &LessThanExpression[T]{
 		A: a,
 		B: b,
@@ -145,6 +145,14 @@ func (o *LessThanExpression[T]) Visit(visitor ExpressionVisitorIntarface[T]) {
 	o.B.Visit(visitor)
 }
 
+type Bool string
+
+const (
+	True      Bool = "true"
+	False     Bool = "false"
+	Undefined Bool = "undefined"
+)
+
 type ComparableValue interface {
 	Equal(ComparableValue) (bool, error)
 	Less(ComparableValue) (bool, error)
@@ -152,11 +160,11 @@ type ComparableValue interface {
 	Value() any
 }
 
-type FieldValueExpression[T ID[T]] struct {
+type FieldValueExpression[T comparable] struct {
 	FieldName FieldName
 }
 
-func NewFieldValueExpression[T ID[T]](fieldName FieldName) FieldValueExpression[T] {
+func NewFieldValueExpression[T comparable](fieldName FieldName) FieldValueExpression[T] {
 	return FieldValueExpression[T]{
 		FieldName: fieldName,
 	}
@@ -188,11 +196,11 @@ func (o FieldValueExpression[T]) GetFieldName() FieldName {
 	return o.FieldName
 }
 
-type ConstValueExpression[T ID[T]] struct {
+type ConstValueExpression[T comparable] struct {
 	value ComparableValue
 }
 
-func NewConstValueExpression[T ID[T]](v ComparableValue) ConstValueExpression[T] {
+func NewConstValueExpression[T comparable](v ComparableValue) ConstValueExpression[T] {
 	return ConstValueExpression[T]{value: v}
 }
 

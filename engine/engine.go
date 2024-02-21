@@ -3,23 +3,26 @@ package engine
 import (
 	"context"
 	"errors"
+
+	"golang.org/x/exp/maps"
 )
 
 var ErrQueryExpressionPartiallySolvable = errors.New("query expression was partially solved")
 var ErrQueryExpressionUnsolvable = errors.New("query expression is unsolvable")
 
-type DataSource[T ID[T]] interface {
+type DataSource[T comparable] interface {
 	Retrieve(query QueryExpression[T]) (Entities[T], bool)
 	Decorate(query QueryExpression[T], entities Entities[T]) (Entities[T], bool) // TODO: think of a better name
 	RetrievableFields() []FieldName
 }
 
-type ExpressionResolver[T ID[T]] struct {
-	sources []DataSource[T]
+type ExpressionResolver[T comparable] struct {
+	sources     []DataSource[T]
+	emptyFields map[FieldName]ComparableValue
 }
 
-func NewExpressionResolver[T ID[T]](sources []DataSource[T]) *ExpressionResolver[T] {
-	return &ExpressionResolver[T]{sources: sources}
+func NewExpressionResolver[T comparable](sources []DataSource[T], emptyFields map[FieldName]ComparableValue) *ExpressionResolver[T] {
+	return &ExpressionResolver[T]{sources: sources, emptyFields: emptyFields}
 }
 
 func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExpression[T]) (Entities[T], error) {
@@ -36,17 +39,22 @@ func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExp
 		return nil, ErrQueryExpressionUnsolvable
 	}
 
+	query, entities, err := e.applyQuery(query, entities)
+	if err != nil {
+		return nil, err
+	}
 	for len(query) > 0 {
-		query, entities, err := e.applyQuery(query, entities)
-		if err != nil {
-			return nil, err
-		}
-
-		entities, decorated := e.decorateEntities(query, entities)
+		var decorated bool
+		entities, decorated = e.decorateEntities(query, entities)
 
 		// we could not decorate the entities anymore, so this is partially solvable
 		if !decorated {
 			return entities, ErrQueryExpressionPartiallySolvable
+		}
+
+		query, entities, err = e.applyQuery(query, entities)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -57,11 +65,38 @@ func (e *ExpressionResolver[T]) decorateEntities(query QueryExpression[T], entit
 	var decorated bool
 	for _, src := range e.sources {
 		decoratedEntities, ok := src.Decorate(query, entities)
-		 
-		if ok {
-			entities = entities.Merge(decoratedEntities)
-			decorated = true
+		if !ok {
+			continue
 		}
+
+		fields := src.RetrievableFields()
+		for id, entity := range entities {
+			de, ok := decoratedEntities[id]
+			// if this entity was not found, initialize it empty
+			if !ok {
+				de = NewEntity[T](id)
+			}
+
+			// for each possible field, we check if it came in the decorated entity
+			// if it did, we add the field to the actual one
+			// if not, we just add an empty field to it
+			for _, f := range fields {
+				if def, ok := de.fields[f]; ok {
+					entity.AddField(f, def)
+					continue
+				}
+
+				ef, ok := e.emptyFields[f] // TODO: podemos verificar esto al crear el resolver, comparando todos los field names de los sources a ver si existen en este map
+				if !ok {
+					panic(errors.New("unmapped field name"))
+				}
+				entity.AddField(f, ef)
+			}
+
+			entities[id] = entity
+		}
+
+		decorated = true
 	}
 
 	return entities, decorated
@@ -70,7 +105,8 @@ func (e *ExpressionResolver[T]) decorateEntities(query QueryExpression[T], entit
 func (e *ExpressionResolver[T]) applyQuery(query QueryExpression[T], entities Entities[T]) (QueryExpression[T], Entities[T], error) {
 	newQuery := QueryExpression[T]{}
 	for _, operator := range query {
-		if !operator.IsResolvable(entities[0]) {
+		entity := maps.Values(entities)[0]
+		if !operator.IsResolvable(entity) {
 			newQuery = append(newQuery, operator)
 		}
 	}
@@ -93,7 +129,7 @@ func (e *ExpressionResolver[T]) applyQuery(query QueryExpression[T], entities En
 		}
 
 		if !filterEntity {
-			newEntities = append(newEntities, e)
+			newEntities[e.id] = e
 		}
 	}
 

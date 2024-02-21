@@ -72,7 +72,10 @@ func (s OrderDataSource) Retrieve(query engine.QueryExpression[OrderID]) (engine
 	ov := &OrderVisitor{}
 	query.Visit(ov)
 
-	return nil, false
+	id1 := OrderID("order_1")
+	e1 := engine.NewEntity(id1)
+	e1.AddField(ServiceAmountName, NewServiceAmount(10))
+	return engine.Entities[OrderID]{id1: e1}, true
 }
 
 func (s OrderDataSource) Decorate(query engine.QueryExpression[OrderID], entities engine.Entities[OrderID]) (engine.Entities[OrderID], bool) {
