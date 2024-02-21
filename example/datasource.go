@@ -8,6 +8,9 @@ type OrderVisitor struct {
 	serviceAmountFrom, serviceAmountTo *int64
 }
 
+func (v *OrderVisitor) In(e engine.InExpression[OrderID]) {
+}
+
 func (v *OrderVisitor) Exists(e engine.ExistsExpression[OrderID]) {
 }
 

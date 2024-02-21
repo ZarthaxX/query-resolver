@@ -5,6 +5,8 @@ import "errors"
 type ExpressionType string
 
 var (
+	unresolvableExpressionErr = errors.New("tried resolving an unresolvable expression")
+
 	EqualExpressionType ExpressionType = "equal_operator"
 )
 
@@ -39,6 +41,7 @@ type ExpressionVisitorIntarface[T comparable] interface {
 	Exists(ExistsExpression[T])
 	Equal(EqualExpression[T])
 	LessThan(LessThanExpression[T])
+	In(InExpression[T])
 	Const(ConstValueExpression[T])
 	Field(FieldValueExpression[T])
 }
@@ -57,6 +60,10 @@ func NewExistsExpression[T comparable](a ValueExpression[T]) *ExistsExpression[T
 }
 
 func (o *ExistsExpression[T]) Resolve(e EntityInterface) (TruthValue, error) {
+	if !o.IsResolvable(e) {
+		return Undefined, unresolvableExpressionErr
+	}
+
 	va, err := o.A.Resolve(e)
 	if err != nil {
 		return False, err
@@ -88,6 +95,10 @@ func NewEqualExpression[T comparable](a, b ValueExpression[T]) *EqualExpression[
 }
 
 func (o *EqualExpression[T]) Resolve(e EntityInterface) (TruthValue, error) {
+	if !o.IsResolvable(e) {
+		return Undefined, unresolvableExpressionErr
+	}
+
 	va, err := o.A.Resolve(e)
 	if err != nil {
 		return False, err
@@ -127,6 +138,10 @@ func NewLessThanExpression[T comparable](a, b ValueExpression[T]) *LessThanExpre
 }
 
 func (o *LessThanExpression[T]) Resolve(e EntityInterface) (TruthValue, error) {
+	if !o.IsResolvable(e) {
+		return Undefined, unresolvableExpressionErr
+	}
+
 	va, err := o.A.Resolve(e)
 	if err != nil {
 		return False, err
@@ -151,6 +166,74 @@ func (o *LessThanExpression[T]) Visit(visitor ExpressionVisitorIntarface[T]) {
 	o.B.Visit(visitor)
 }
 
+/*
+InExpression takes 2 values and returns if their values match
+*/
+type InExpression[T comparable] struct {
+	A    ValueExpression[T]
+	List []ValueExpression[T]
+}
+
+func NewInExpression[T comparable](a ValueExpression[T], list []ValueExpression[T]) *InExpression[T] {
+	return &InExpression[T]{
+		A:    a,
+		List: list,
+	}
+}
+
+func (o *InExpression[T]) Resolve(e EntityInterface) (TruthValue, error) {
+	va, err := o.A.Resolve(e)
+	if err != nil {
+		return False, err
+	}
+
+	var unresolvableValueExists bool
+	for _, elem := range o.List {
+		if elem.IsResolvable(e) {
+			v, err := elem.Resolve(e)
+			if err != nil {
+				return Undefined, err
+			}
+
+			tv, err := v.Equal(va)
+			if err != nil {
+				return Undefined, err
+			}
+			if tv == True {
+				return True, nil
+			}
+		} else {
+			unresolvableValueExists = true
+		}
+	}
+
+	if unresolvableValueExists {
+		return Undefined, errors.New("unresolvable value")
+	}
+
+	return False, nil
+}
+
+func (o *InExpression[T]) IsResolvable(e EntityInterface) bool {
+	// try resolving the expression, because we just need 1 resolvable expression that matches
+	// or in the worst case, we need every expression from the list because none match
+	if _, err := o.Resolve(e); err == unresolvableExpressionErr {
+		return false
+	} else {
+		return true
+	}
+}
+
+func (o *InExpression[T]) Visit(visitor ExpressionVisitorIntarface[T]) {
+	visitor.In(*o)
+
+	o.A.Visit(visitor)
+
+	for _, elem := range o.List {
+		elem.Visit(visitor)
+	}
+}
+
 type ComparableValue interface {
 	Equal(ComparableValue) (TruthValue, error)
 	Less(ComparableValue) (TruthValue, error)
@@ -169,6 +252,10 @@ func NewFieldValueExpression[T comparable](fieldName FieldName) FieldValueExpres
 }
 
 func (o FieldValueExpression[T]) Resolve(e EntityInterface) (res ComparableValue, err error) {
+	if !o.IsResolvable(e) {
+		return nil, unresolvableExpressionErr
+	}
+
 	v, err := e.SeekField(o.FieldName)
 	if err != nil {
 		return res, err
