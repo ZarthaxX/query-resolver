@@ -1,4 +1,4 @@
-package main
+package example_test
 
 import "search-engine/engine"
 

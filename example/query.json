@@ -40,7 +40,7 @@
             "value_a": {
                 "const": {
                     "type": "string",
-                    "value": "closed"
+                    "value": "open"
                 }
             },
             "value_b": {

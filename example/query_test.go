@@ -1,10 +1,11 @@
-package main
+package example_test
 
 import (
 	"context"
 	"fmt"
 	"os"
 	"search-engine/engine"
+	"testing"
 )
 
 func retrieveFieldExpression(name engine.FieldName) (engine.FieldValueExpression[OrderID], bool) {
@@ -18,11 +19,7 @@ func retrieveFieldExpression(name engine.FieldName) (engine.FieldValueExpression
 	}
 }
 
-type DTO struct {
-	Value any `json:"value"`
-}
-
-func main() {
+func TestQuery(t *testing.T) {
 	entity := engine.NewEntity[OrderID]("oid_1")
 	entity.AddField(ServiceAmountName, NewServiceAmount(10))
 
