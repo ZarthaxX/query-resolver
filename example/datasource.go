@@ -2,7 +2,7 @@ package example_test
 
 import "search-engine/engine"
 
-var EmptyEntity = engine.Entity[OrderID]{}
+var EmptyEntity = engine.NewEmptyEntity[OrderID]()
 
 type OrderVisitor struct {
 	serviceAmountFrom, serviceAmountTo *int64
@@ -75,10 +75,12 @@ func (s OrderDataSource) Retrieve(query engine.QueryExpression[OrderID]) (engine
 	id1 := OrderID("order_1")
 	e1 := engine.NewEntity(id1)
 	e1.AddField(ServiceAmountName, NewServiceAmount(10))
-	e1.AddField(OrderStatusName, NewOrderStatus("open"))
 	return engine.Entities[OrderID]{id1: e1}, true
 }
 
 func (s OrderDataSource) Decorate(query engine.QueryExpression[OrderID], entities engine.Entities[OrderID]) (engine.Entities[OrderID], bool) {
-	return nil, false
+	id1 := OrderID("order_1")
+	e1 := engine.NewEntity(id1)
+	e1.AddField(OrderStatusName, NewOrderStatus("open"))
+	return engine.Entities[OrderID]{id1: e1}, true
 }

@@ -8,16 +8,22 @@ var (
 	EqualExpressionType ExpressionType = "equal_operator"
 )
 
+type EntityInterface interface {
+	SeekField(f FieldName) (any, error)
+	IsFieldPresent(f FieldName) bool
+	AddField(name FieldName, value any)
+}
+
 type ValueExpression[T comparable] interface {
-	Resolve(e Entity[T]) (ComparableValue, error)
-	IsResolvable(e Entity[T]) bool // call this before Resolve to check if value can be resolvable and avoid errors
+	Resolve(e EntityInterface) (ComparableValue, error)
+	IsResolvable(e EntityInterface) bool // call this before Resolve to check if value can be resolvable and avoid errors
 	Visit(visitor ExpressionVisitorIntarface[T])
 	GetFieldName() FieldName
 }
 
 type ComparisonExpressionInterface[T comparable] interface {
-	Resolve(e Entity[T]) (TruthValue, error)
-	IsResolvable(e Entity[T]) bool
+	Resolve(e EntityInterface) (TruthValue, error)
+	IsResolvable(e EntityInterface) bool
 	Visit(visitor ExpressionVisitorIntarface[T])
 }
 
@@ -50,7 +56,7 @@ func NewExistsExpression[T comparable](a ValueExpression[T]) *ExistsExpression[T
 	}
 }
 
-func (o *ExistsExpression[T]) Resolve(e Entity[T]) (TruthValue, error) {
+func (o *ExistsExpression[T]) Resolve(e EntityInterface) (TruthValue, error) {
 	va, err := o.A.Resolve(e)
 	if err != nil {
 		return False, err
@@ -59,7 +65,7 @@ func (o *ExistsExpression[T]) Resolve(e Entity[T]) (TruthValue, error) {
 	return va.Equal(va)
 }
 
-func (o *ExistsExpression[T]) IsResolvable(e Entity[T]) bool {
+func (o *ExistsExpression[T]) IsResolvable(e EntityInterface) bool {
 	return o.A.IsResolvable(e)
 }
 
@@ -81,7 +87,7 @@ func NewEqualExpression[T comparable](a, b ValueExpression[T]) *EqualExpression[
 	}
 }
 
-func (o *EqualExpression[T]) Resolve(e Entity[T]) (TruthValue, error) {
+func (o *EqualExpression[T]) Resolve(e EntityInterface) (TruthValue, error) {
 	va, err := o.A.Resolve(e)
 	if err != nil {
 		return False, err
@@ -95,7 +101,7 @@ func (o *EqualExpression[T]) Resolve(e Entity[T]) (TruthValue, error) {
 	return va.Equal(vb)
 }
 
-func (o *EqualExpression[T]) IsResolvable(e Entity[T]) bool {
+func (o *EqualExpression[T]) IsResolvable(e EntityInterface) bool {
 	return o.A.IsResolvable(e) && o.B.IsResolvable(e)
 }
 
@@ -120,7 +126,7 @@ func NewLessThanExpression[T comparable](a, b ValueExpression[T]) *LessThanExpre
 	}
 }
 
-func (o *LessThanExpression[T]) Resolve(e Entity[T]) (TruthValue, error) {
+func (o *LessThanExpression[T]) Resolve(e EntityInterface) (TruthValue, error) {
 	va, err := o.A.Resolve(e)
 	if err != nil {
 		return False, err
@@ -134,7 +140,7 @@ func (o *LessThanExpression[T]) Resolve(e Entity[T]) (TruthValue, error) {
 	return va.Less(vb)
 }
 
-func (o *LessThanExpression[T]) IsResolvable(e Entity[T]) bool {
+func (o *LessThanExpression[T]) IsResolvable(e EntityInterface) bool {
 	return o.A.IsResolvable(e) && o.B.IsResolvable(e)
 }
 
@@ -162,7 +168,7 @@ func NewFieldValueExpression[T comparable](fieldName FieldName) FieldValueExpres
 	}
 }
 
-func (o FieldValueExpression[T]) Resolve(e Entity[T]) (res ComparableValue, err error) {
+func (o FieldValueExpression[T]) Resolve(e EntityInterface) (res ComparableValue, err error) {
 	v, err := e.SeekField(o.FieldName)
 	if err != nil {
 		return res, err
@@ -176,7 +182,7 @@ func (o FieldValueExpression[T]) Resolve(e Entity[T]) (res ComparableValue, err 
 	return fv, nil
 }
 
-func (o FieldValueExpression[T]) IsResolvable(e Entity[T]) bool {
+func (o FieldValueExpression[T]) IsResolvable(e EntityInterface) bool {
 	return e.IsFieldPresent(o.FieldName)
 }
 
@@ -196,11 +202,11 @@ func NewConstValueExpression[T comparable](v ComparableValue) ConstValueExpressi
 	return ConstValueExpression[T]{value: v}
 }
 
-func (o ConstValueExpression[T]) Resolve(e Entity[T]) (ComparableValue, error) {
+func (o ConstValueExpression[T]) Resolve(e EntityInterface) (ComparableValue, error) {
 	return o.value, nil
 }
 
-func (o ConstValueExpression[T]) IsResolvable(e Entity[T]) bool {
+func (o ConstValueExpression[T]) IsResolvable(e EntityInterface) bool {
 	return true
 }
 

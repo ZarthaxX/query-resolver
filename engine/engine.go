@@ -44,7 +44,10 @@ func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExp
 	}
 	for len(query) > 0 {
 		var decorated bool
-		entities, decorated = e.decorateEntities(query, entities)
+		entities, decorated, err = e.decorateEntities(query, entities)
+		if err != nil {
+			return nil, err
+		}
 
 		// we could not decorate the entities anymore, so this is partially solvable
 		if !decorated {
@@ -60,7 +63,7 @@ func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExp
 	return entities, nil
 }
 
-func (e *ExpressionResolver[T]) decorateEntities(query QueryExpression[T], entities Entities[T]) (Entities[T], bool) {
+func (e *ExpressionResolver[T]) decorateEntities(query QueryExpression[T], entities Entities[T]) (Entities[T], bool, error) {
 	var decorated bool
 	for _, src := range e.sources {
 		decoratedEntities, ok := src.Decorate(query, entities)
@@ -80,12 +83,17 @@ func (e *ExpressionResolver[T]) decorateEntities(query QueryExpression[T], entit
 			// if it did, we add the field to the actual one
 			// if not, we just add an empty field to it
 			for _, f := range fields {
-				if def, ok := de.fields[f]; ok {
-					entity.AddField(f, def)
+				if de.IsFieldPresent(f) {
+					v, err := de.SeekField(f)
+					if err != nil {
+						return nil, false, err
+					}
+					entity.AddField(f, v)
 					continue
+				} else if !entity.IsFieldPresent(f) {
+					entity.AddField(f, UndefinedValue{})
 				}
 
-				entity.AddField(f, UndefinedValue{})
 			}
 
 			entities[id] = entity
@@ -94,14 +102,14 @@ func (e *ExpressionResolver[T]) decorateEntities(query QueryExpression[T], entit
 		decorated = true
 	}
 
-	return entities, decorated
+	return entities, decorated, nil
 }
 
 func (e *ExpressionResolver[T]) applyQuery(query QueryExpression[T], entities Entities[T]) (QueryExpression[T], Entities[T], error) {
 	newQuery := QueryExpression[T]{}
 	for _, operator := range query {
 		entity := maps.Values(entities)[0]
-		if !operator.IsResolvable(entity) {
+		if !operator.IsResolvable(&entity) {
 			newQuery = append(newQuery, operator)
 		}
 	}
@@ -111,8 +119,8 @@ func (e *ExpressionResolver[T]) applyQuery(query QueryExpression[T], entities En
 	for _, e := range entities {
 		var filterEntity bool
 		for _, operator := range query {
-			if operator.IsResolvable(e) { // should be true for all entities, as they are being processed in parallel
-				ok, err := operator.Resolve(e)
+			if operator.IsResolvable(&e) { // should be true for all entities, as they are being processed in parallel
+				ok, err := operator.Resolve(&e)
 				if err != nil {
 					return nil, nil, err
 				}
