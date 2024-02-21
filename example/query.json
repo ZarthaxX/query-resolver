@@ -1,0 +1,53 @@
+[
+    {
+        "range": {
+            "value": {
+                "field": {
+                    "name": "order.service_amount"
+                }
+            },
+            "from": {
+                "const": {
+                    "type": "int",
+                    "value": "1"
+                }
+            },
+            "to": {
+                "const": {
+                    "type": "int",
+                    "value": "52"
+                }
+            }
+        }
+    },
+    {
+        "equal": {
+            "value_a": {
+                "const": {
+                    "type": "int",
+                    "value": "10"
+                }
+            },
+            "value_b": {
+                "field": {
+                    "name": "order.service_amount"
+                }
+            }
+        }
+    },
+    {
+        "equal": {
+            "value_a": {
+                "const": {
+                    "type": "string",
+                    "value": "open"
+                }
+            },
+            "value_b": {
+                "field": {
+                    "name": "order.status"
+                }
+            }
+        }
+    }
+]
