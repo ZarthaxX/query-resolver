@@ -1,6 +1,6 @@
 package main
 
-import "query-resolver/engine"
+import "github.com/ZarthaxX/query-resolver/engine"
 
 type OrderID string
 

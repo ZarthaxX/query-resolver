@@ -1,4 +1,4 @@
-module query-resolver
+module github.com/ZarthaxX/query-resolver
 
 go 1.21.5
 

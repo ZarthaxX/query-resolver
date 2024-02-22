@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"query-resolver/engine"
+
+	"github.com/ZarthaxX/query-resolver/engine"
 )
 
 func main() {

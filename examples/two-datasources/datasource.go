@@ -1,8 +1,9 @@
 package main
 
 import (
-	"query-resolver/engine"
 	"time"
+
+	"github.com/ZarthaxX/query-resolver/engine"
 )
 
 var EmptyEntity = engine.NewEmptyEntity[OrderID]()
