@@ -8,13 +8,13 @@ type OrderVisitor struct {
 	serviceAmountFrom, serviceAmountTo *int64
 }
 
-func (v *OrderVisitor) In(e engine.InExpression[OrderID]) {
+func (v *OrderVisitor) In(e engine.InExpression) {
 }
 
-func (v *OrderVisitor) Exists(e engine.ExistsExpression[OrderID]) {
+func (v *OrderVisitor) Exists(e engine.ExistsExpression) {
 }
 
-func (v *OrderVisitor) Equal(e engine.EqualExpression[OrderID]) {
+func (v *OrderVisitor) Equal(e engine.EqualExpression) {
 	fa := e.A.GetFieldName()
 	fb := e.B.GetFieldName()
 	if fa != ServiceAmountName && fb != ServiceAmountName {
@@ -36,7 +36,7 @@ func (v *OrderVisitor) Equal(e engine.EqualExpression[OrderID]) {
 	}
 }
 
-func (v *OrderVisitor) LessThan(e engine.LessThanExpression[OrderID]) {
+func (v *OrderVisitor) LessThan(e engine.LessThanExpression) {
 	fa := e.A.GetFieldName()
 	fb := e.B.GetFieldName()
 	if fa != ServiceAmountName && fb != ServiceAmountName {
@@ -56,11 +56,11 @@ func (v *OrderVisitor) LessThan(e engine.LessThanExpression[OrderID]) {
 	}
 }
 
-func (v *OrderVisitor) Const(e engine.ConstValueExpression[OrderID]) {
+func (v *OrderVisitor) Const(e engine.ConstValueExpression) {
 
 }
 
-func (v *OrderVisitor) Field(e engine.FieldValueExpression[OrderID]) {
+func (v *OrderVisitor) Field(e engine.FieldValueExpression) {
 
 }
 
@@ -68,10 +68,10 @@ type OrderDataSource struct {
 }
 
 func (s OrderDataSource) RetrievableFields() []engine.FieldName {
-	return []engine.FieldName{ServiceAmountName, OrderStatusName}
+	return []engine.FieldName{ServiceAmountName, OrderStatusName, OrderTypeName}
 }
 
-func (s OrderDataSource) Retrieve(query engine.QueryExpression[OrderID]) (engine.Entities[OrderID], bool) {
+func (s OrderDataSource) Retrieve(query engine.QueryExpression) (engine.Entities[OrderID], bool) {
 	ov := &OrderVisitor{}
 	query.Visit(ov)
 
@@ -81,9 +81,10 @@ func (s OrderDataSource) Retrieve(query engine.QueryExpression[OrderID]) (engine
 	return engine.Entities[OrderID]{id1: e1}, true
 }
 
-func (s OrderDataSource) Decorate(query engine.QueryExpression[OrderID], entities engine.Entities[OrderID]) (engine.Entities[OrderID], bool) {
+func (s OrderDataSource) Decorate(query engine.QueryExpression, entities engine.Entities[OrderID]) (engine.Entities[OrderID], bool) {
 	id1 := OrderID("order_1")
 	e1 := engine.NewEntity(id1)
 	e1.AddField(OrderStatusName, NewOrderStatus("open"))
+	e1.AddField(OrderTypeName, NewOrderType("door"))
 	return engine.Entities[OrderID]{id1: e1}, true
 }

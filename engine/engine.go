@@ -11,8 +11,8 @@ var ErrQueryExpressionPartiallySolvable = errors.New("query expression was parti
 var ErrQueryExpressionUnsolvable = errors.New("query expression is unsolvable")
 
 type DataSource[T comparable] interface {
-	Retrieve(query QueryExpression[T]) (Entities[T], bool)
-	Decorate(query QueryExpression[T], entities Entities[T]) (Entities[T], bool) // TODO: think of a better name
+	Retrieve(query QueryExpression) (Entities[T], bool)
+	Decorate(query QueryExpression, entities Entities[T]) (Entities[T], bool) // TODO: think of a better name
 	RetrievableFields() []FieldName
 }
 
@@ -24,7 +24,7 @@ func NewExpressionResolver[T comparable](sources []DataSource[T]) *ExpressionRes
 	return &ExpressionResolver[T]{sources: sources}
 }
 
-func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExpression[T]) (Entities[T], error) {
+func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExpression) (Entities[T], error) {
 	var entities Entities[T]
 	var retrieved bool
 	for _, src := range e.sources {
@@ -63,7 +63,9 @@ func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExp
 	return entities, nil
 }
 
-func (e *ExpressionResolver[T]) decorateEntities(query QueryExpression[T], entities Entities[T]) (Entities[T], bool, error) {
+func (e *ExpressionResolver[T]) decorateEntities(query QueryExpression, entities Entities[T]) (Entities[T], bool, error) {
+	// decorated tells us if a new field was added to ANY entity
+	// if not, we can safely assume we cannot move from this state, so the expression will be unsolvable
 	var decorated bool
 	for _, src := range e.sources {
 		decoratedEntities, ok := src.Decorate(query, entities)
@@ -83,30 +85,30 @@ func (e *ExpressionResolver[T]) decorateEntities(query QueryExpression[T], entit
 			// if it did, we add the field to the actual one
 			// if not, we just add an empty field to it
 			for _, f := range fields {
-				if de.IsFieldPresent(f) {
+				if de.IsFieldPresent(f) && !entity.IsFieldPresent(f) {
 					v, err := de.SeekField(f)
 					if err != nil {
 						return nil, false, err
 					}
 					entity.AddField(f, v)
+					decorated = true
 					continue
 				} else if !entity.IsFieldPresent(f) {
 					entity.AddField(f, UndefinedValue{})
+					decorated = true
 				}
 
 			}
 
 			entities[id] = entity
 		}
-
-		decorated = true
 	}
 
 	return entities, decorated, nil
 }
 
-func (e *ExpressionResolver[T]) applyQuery(query QueryExpression[T], entities Entities[T]) (QueryExpression[T], Entities[T], error) {
-	newQuery := QueryExpression[T]{}
+func (e *ExpressionResolver[T]) applyQuery(query QueryExpression, entities Entities[T]) (QueryExpression, Entities[T], error) {
+	newQuery := QueryExpression{}
 	for _, operator := range query {
 		entity := maps.Values(entities)[0]
 		if !operator.IsResolvable(&entity) {

@@ -8,14 +8,16 @@ import (
 	"testing"
 )
 
-func retrieveFieldExpression(name engine.FieldName) (engine.FieldValueExpression[OrderID], bool) {
+func retrieveFieldExpression(name engine.FieldName) (engine.FieldValueExpression, bool) {
 	switch name {
 	case ServiceAmountName:
 		return ServiceAmountField, true
 	case OrderStatusName:
 		return OrderStatusField, true
+	case OrderTypeName:
+		return OrderTypeField, true
 	default:
-		return engine.FieldValueExpression[OrderID]{}, false
+		return engine.FieldValueExpression{}, false
 	}
 }
 
