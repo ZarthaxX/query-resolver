@@ -14,9 +14,9 @@ type treeNodeDTO struct {
 	In    *inNodeDTO    `json:"in,omitempty"`
 }
 
-type equalNodeDTO struct {
-	ValueA valueNodeDTO `json:"value_a"`
-	ValueB valueNodeDTO `json:"value_b"`
+type equalNodeDTO[T comparable] struct {
+	ValueA valueNodeDTO[T] `json:"value_a"`
+	ValueB valueNodeDTO[T] `json:"value_b"`
 }
 
 type rangeNodeDTO struct {
@@ -41,7 +41,7 @@ type constNodeDTO struct {
 	Value string `json:"value"`
 }
 
-type fieldNodeDTO struct {
+type fieldNodeDTO[T comparable] struct {
 	Name string `json:"name"`
 }
 
@@ -200,4 +200,13 @@ func (n timeNodeDTO) parse() (ValueExpression, error) {
 	}
 
 	return NewConstValueExpression(NewInt64Value(value + offset)), nil
+}
+
+func (n fieldNodeDTO[T]) parse(retrieve valueExpressionRetriever[T]) (ValueExpression[T], error) {
+	field, ok := retrieve(FieldName(n.Name))
+	if !ok {
+		return nil, fmt.Errorf("fieldNodeDTO: no mapping specified for name %s", n.Name)
+	}
+
+	return field, nil
 }
