@@ -1,7 +1,7 @@
 package main
 
 import (
-	"search-engine/engine"
+	"query-resolver/engine"
 	"time"
 )
 

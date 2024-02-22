@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"search-engine/engine"
+	"query-resolver/engine"
 )
 
 func main() {

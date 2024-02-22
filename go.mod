@@ -1,4 +1,4 @@
-module search-engine
+module query-resolver
 
 go 1.21.5
 

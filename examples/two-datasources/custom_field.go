@@ -1,6 +1,6 @@
 package main
 
-import "search-engine/engine"
+import "query-resolver/engine"
 
 type OrderID string
 
