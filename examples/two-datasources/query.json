@@ -1,0 +1,90 @@
+[
+    {
+        "range": {
+            "value": {
+                "field": {
+                    "name": "service.start"
+                }
+            },
+            "to": {
+                "time": {
+                    "offset": 3600
+                }
+            }
+        }
+    },
+    {
+        "range": {
+            "value": {
+                "field": {
+                    "name": "service.amount"
+                }
+            },
+            "from": {
+                "const": {
+                    "type": "int",
+                    "value": "1"
+                }
+            },
+            "to": {
+                "const": {
+                    "type": "int",
+                    "value": "52"
+                }
+            }
+        }
+    },
+    {
+        "equal": {
+            "value_a": {
+                "const": {
+                    "type": "int",
+                    "value": "10"
+                }
+            },
+            "value_b": {
+                "field": {
+                    "name": "service.amount"
+                }
+            }
+        }
+    },
+    {
+        "equal": {
+            "value_a": {
+                "const": {
+                    "type": "string",
+                    "value": "open"
+                }
+            },
+            "value_b": {
+                "field": {
+                    "name": "order.status"
+                }
+            }
+        }
+    },
+    {
+        "in": {
+            "value": {
+                "field": {
+                    "name": "order.service_type"
+                }
+            },
+            "values": [
+                {
+                    "const": {
+                        "type": "string",
+                        "value": "door"
+                    }
+                },
+                {
+                    "const": {
+                        "type": "string",
+                        "value": "pickup"
+                    }
+                }
+            ]
+        }
+    }
+]

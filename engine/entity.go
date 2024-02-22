@@ -19,6 +19,14 @@ func NewEntity[T comparable](id T) Entity[T] {
 	}
 }
 
+func NewEmptyEntity[T comparable]() *Entity[T] {
+	var id T
+	return &Entity[T]{
+		id:     id,
+		fields: make(map[FieldName]any),
+	}
+}
+
 func (e Entity[T]) SeekField(f FieldName) (any, error) {
 	ef, ok := e.fields[FieldName(f)]
 	if !ok {
