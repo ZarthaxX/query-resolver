@@ -1,6 +1,9 @@
-package example_test
+package main
 
-import "search-engine/engine"
+import (
+	"search-engine/engine"
+	"time"
+)
 
 var EmptyEntity = engine.NewEmptyEntity[OrderID]()
 
@@ -67,24 +70,32 @@ func (v *OrderVisitor) Field(e engine.FieldValueExpression) {
 type OrderDataSource struct {
 }
 
-func (s OrderDataSource) RetrievableFields() []engine.FieldName {
-	return []engine.FieldName{ServiceAmountName, OrderStatusName, OrderTypeName}
-}
-
-func (s OrderDataSource) Retrieve(query engine.QueryExpression) (engine.Entities[OrderID], bool) {
-	ov := &OrderVisitor{}
-	query.Visit(ov)
-
-	id1 := OrderID("order_1")
-	e1 := engine.NewEntity(id1)
-	e1.AddField(ServiceAmountName, NewServiceAmount(10))
-	return engine.Entities[OrderID]{id1: e1}, true
-}
-
-func (s OrderDataSource) Decorate(query engine.QueryExpression, entities engine.Entities[OrderID]) (engine.Entities[OrderID], bool) {
+func (s OrderDataSource) Retrieve(query engine.QueryExpression, entities engine.Entities[OrderID]) (
+	retrievableFields []engine.FieldName,
+	result engine.Entities[OrderID],
+	applies bool) {
 	id1 := OrderID("order_1")
 	e1 := engine.NewEntity(id1)
 	e1.AddField(OrderStatusName, NewOrderStatus("open"))
 	e1.AddField(OrderTypeName, NewOrderType("door"))
-	return engine.Entities[OrderID]{id1: e1}, true
+	return []engine.FieldName{OrderStatusName, OrderTypeName},
+		engine.Entities[OrderID]{id1: e1},
+		true
+}
+
+type ServiceDataSource struct {
+}
+
+func (s ServiceDataSource) Retrieve(query engine.QueryExpression, entities engine.Entities[OrderID]) (
+	retrievableFields []engine.FieldName,
+	result engine.Entities[OrderID],
+	applies bool) {
+
+	id1 := OrderID("order_1")
+	e1 := engine.NewEntity(id1)
+	e1.AddField(ServiceAmountName, NewServiceAmount(10))
+	e1.AddField(ServiceStartName, NewServiceStart(time.Now().Unix()))
+	return []engine.FieldName{ServiceStartName, ServiceAmountName},
+		engine.Entities[OrderID]{id1: e1},
+		true
 }

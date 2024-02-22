@@ -1,27 +1,13 @@
-package example_test
+package main
 
 import (
 	"context"
 	"fmt"
 	"os"
 	"search-engine/engine"
-	"testing"
 )
 
-func retrieveFieldExpression(name engine.FieldName) (engine.FieldValueExpression, bool) {
-	switch name {
-	case ServiceAmountName:
-		return ServiceAmountField, true
-	case OrderStatusName:
-		return OrderStatusField, true
-	case OrderTypeName:
-		return OrderTypeField, true
-	default:
-		return engine.FieldValueExpression{}, false
-	}
-}
-
-func TestQuery(t *testing.T) {
+func main() {
 	entity := engine.NewEntity[OrderID]("oid_1")
 	entity.AddField(ServiceAmountName, NewServiceAmount(10))
 
@@ -36,6 +22,7 @@ func TestQuery(t *testing.T) {
 
 	sources := []engine.DataSource[OrderID]{
 		OrderDataSource{},
+		ServiceDataSource{},
 	}
 
 	resolver := engine.NewExpressionResolver(sources)

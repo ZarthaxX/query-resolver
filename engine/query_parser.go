@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 )
 
 type treeNodeDTO struct {
@@ -32,6 +33,7 @@ type inNodeDTO struct {
 type valueNodeDTO struct {
 	Const *constNodeDTO `json:"const,omitempty"`
 	Field *fieldNodeDTO `json:"field,omitempty"`
+	Time  *timeNodeDTO  `json:"time,omitempty"`
 }
 
 type constNodeDTO struct {
@@ -41,6 +43,11 @@ type constNodeDTO struct {
 
 type fieldNodeDTO struct {
 	Name string `json:"name"`
+}
+
+type timeNodeDTO struct {
+	Value  *int64 `json:"value,omitempty"`
+	Offset *int64 `json:"offset,omitempty"`
 }
 
 type valueExpressionRetriever func(name FieldName) (FieldValueExpression, bool)
@@ -150,6 +157,8 @@ func (n valueNodeDTO) parse(retriever valueExpressionRetriever) (ValueExpression
 		return n.Field.parse(retriever)
 	} else if n.Const != nil {
 		return n.Const.parse()
+	} else if n.Time != nil {
+		return n.Time.parse()
 	} else {
 		return nil, errors.New("valueNodeDTO: no mapping specified")
 	}
@@ -177,4 +186,18 @@ func (n fieldNodeDTO) parse(retrieve valueExpressionRetriever) (ValueExpression,
 	}
 
 	return field, nil
+}
+
+func (n timeNodeDTO) parse() (ValueExpression, error) {
+	var offset int64
+	if n.Offset != nil {
+		offset = *n.Offset
+	}
+
+	value := time.Now().Unix()
+	if n.Value != nil {
+		value = *n.Value
+	}
+
+	return NewConstValueExpression(NewInt64Value(value + offset)), nil
 }

@@ -3,7 +3,21 @@
         "range": {
             "value": {
                 "field": {
-                    "name": "order.service_amount"
+                    "name": "service.start"
+                }
+            },
+            "to": {
+                "time": {
+                    "offset": 3600
+                }
+            }
+        }
+    },
+    {
+        "range": {
+            "value": {
+                "field": {
+                    "name": "service.amount"
                 }
             },
             "from": {
@@ -30,7 +44,7 @@
             },
             "value_b": {
                 "field": {
-                    "name": "order.service_amount"
+                    "name": "service.amount"
                 }
             }
         }

@@ -3,17 +3,23 @@ package engine
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"golang.org/x/exp/maps"
 )
 
-var ErrQueryExpressionPartiallySolvable = errors.New("query expression was partially solved")
 var ErrQueryExpressionUnsolvable = errors.New("query expression is unsolvable")
 
+type QueryExpressionPartiallySolvableError struct {
+	RemainingQuery QueryExpression
+}
+
+func (e QueryExpressionPartiallySolvableError) Error() string {
+	return fmt.Errorf("query expression was partially solved: %+v", e.RemainingQuery).Error()
+}
+
 type DataSource[T comparable] interface {
-	Retrieve(query QueryExpression) (Entities[T], bool)
-	Decorate(query QueryExpression, entities Entities[T]) (Entities[T], bool) // TODO: think of a better name
-	RetrievableFields() []FieldName
+	Retrieve(query QueryExpression, entities Entities[T]) ([]FieldName, Entities[T], bool)
 }
 
 type ExpressionResolver[T comparable] struct {
@@ -24,11 +30,11 @@ func NewExpressionResolver[T comparable](sources []DataSource[T]) *ExpressionRes
 	return &ExpressionResolver[T]{sources: sources}
 }
 
-func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExpression) (Entities[T], error) {
-	var entities Entities[T]
+func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExpression) (entities Entities[T], err error) {
+	entities = Entities[T]{}
 	var retrieved bool
 	for _, src := range e.sources {
-		entities, retrieved = src.Retrieve(query)
+		_, entities, retrieved = src.Retrieve(query, entities)
 		if retrieved {
 			break
 		}
@@ -38,73 +44,84 @@ func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExp
 		return nil, ErrQueryExpressionUnsolvable
 	}
 
-	query, entities, err := e.applyQuery(query, entities)
+	query, entities, err = e.applyQuery(query, entities)
 	if err != nil {
 		return nil, err
 	}
+
 	for len(query) > 0 {
-		var decorated bool
-		entities, decorated, err = e.decorateEntities(query, entities)
-		if err != nil {
-			return nil, err
+		var entitiesChanged bool
+		for _, source := range e.sources {
+			var sourceChangedEntities bool
+			entities, sourceChangedEntities, err = e.retrieveEntities(query, entities, source)
+			if err != nil {
+				return nil, err
+			}
+
+			if sourceChangedEntities {
+				entitiesChanged = true
+				// solving it each time we retrieve entities might cause unsolvable queries
+				// because there may be 2 datasource that could benefit from the same query expression
+				// despite that, we better off reducing the entities each time, to avoid cloggering data sources
+				query, entities, err = e.applyQuery(query, entities)
+				if err != nil {
+					return nil, err
+				}
+			}
 		}
 
-		// we could not decorate the entities anymore, so this is partially solvable
-		if !decorated {
-			return entities, ErrQueryExpressionPartiallySolvable
-		}
-
-		query, entities, err = e.applyQuery(query, entities)
-		if err != nil {
-			return nil, err
+		// no entity changed on this run, so this query is partially solvable
+		if !entitiesChanged {
+			return entities, QueryExpressionPartiallySolvableError{RemainingQuery: query}
 		}
 	}
 
 	return entities, nil
 }
 
-func (e *ExpressionResolver[T]) decorateEntities(query QueryExpression, entities Entities[T]) (Entities[T], bool, error) {
-	// decorated tells us if a new field was added to ANY entity
+func (e *ExpressionResolver[T]) retrieveEntities(query QueryExpression, entities Entities[T], source DataSource[T]) (
+	Entities[T],
+	bool,
+	error,
+) {
+	// entitiesChanged tells us if a new field was added to ANY entity
 	// if not, we can safely assume we cannot move from this state, so the expression will be unsolvable
-	var decorated bool
-	for _, src := range e.sources {
-		decoratedEntities, ok := src.Decorate(query, entities)
-		if !ok {
-			continue
-		}
-
-		fields := src.RetrievableFields()
-		for id, entity := range entities {
-			de, ok := decoratedEntities[id]
-			// if this entity was not found, initialize it empty
-			if !ok {
-				de = NewEntity[T](id)
-			}
-
-			// for each possible field, we check if it came in the decorated entity
-			// if it did, we add the field to the actual one
-			// if not, we just add an empty field to it
-			for _, f := range fields {
-				if de.IsFieldPresent(f) && !entity.IsFieldPresent(f) {
-					v, err := de.SeekField(f)
-					if err != nil {
-						return nil, false, err
-					}
-					entity.AddField(f, v)
-					decorated = true
-					continue
-				} else if !entity.IsFieldPresent(f) {
-					entity.AddField(f, UndefinedValue{})
-					decorated = true
-				}
-
-			}
-
-			entities[id] = entity
-		}
+	var entitiesChanged bool
+	retrievableFields, retrievedEntities, ok := source.Retrieve(query, entities)
+	if !ok {
+		return entities, false, nil
 	}
 
-	return entities, decorated, nil
+	for id, entity := range entities {
+		de, ok := retrievedEntities[id]
+		// if this entity was not found, initialize it empty
+		if !ok {
+			de = NewEntity[T](id)
+		}
+
+		// for each possible field, we check if it came in the decorated entity
+		// if it did, we add the field to the actual one
+		// if not, we just add an empty field to it
+		for _, f := range retrievableFields {
+			if de.IsFieldPresent(f) && !entity.IsFieldPresent(f) {
+				v, err := de.SeekField(f)
+				if err != nil {
+					return nil, false, err
+				}
+				entity.AddField(f, v)
+				entitiesChanged = true
+				continue
+			} else if !entity.IsFieldPresent(f) {
+				entity.AddField(f, UndefinedValue{})
+				entitiesChanged = true
+			}
+
+		}
+
+		entities[id] = entity
+	}
+
+	return entities, entitiesChanged, nil
 }
 
 func (e *ExpressionResolver[T]) applyQuery(query QueryExpression, entities Entities[T]) (QueryExpression, Entities[T], error) {
