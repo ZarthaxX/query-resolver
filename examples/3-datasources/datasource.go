@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/ZarthaxX/query-resolver/engine"
@@ -20,20 +21,20 @@ func (v *OrderVisitor) Exists(e engine.ExistsExpression) {
 }
 
 func (v *OrderVisitor) Equal(e engine.EqualExpression) {
-	fa := e.A.GetFieldName()
-	fb := e.B.GetFieldName()
-	if fa != ServiceAmountName && fb != ServiceAmountName {
+	fa := e.A.GetFieldNames()
+	fb := e.B.GetFieldNames()
+	if !slices.Contains(fa, ServiceAmountName) && !slices.Contains(fb, ServiceAmountName) {
 		return
 	}
 
-	if e.A.IsResolvable(EmptyEntity) && fb != engine.EmptyFieldName {
+	if e.A.IsResolvable(EmptyEntity) {
 		ra, _ := e.A.Resolve(EmptyEntity)
 		va, _ := ra.Value().(int64)
 		v.serviceAmountFrom = &va
 		v.serviceAmountTo = &va
 	}
 
-	if e.B.IsResolvable(EmptyEntity) && fa != engine.EmptyFieldName {
+	if e.B.IsResolvable(EmptyEntity) {
 		rb, _ := e.B.Resolve(EmptyEntity)
 		vb, _ := rb.Value().(int64)
 		v.serviceAmountFrom = &vb
@@ -42,19 +43,19 @@ func (v *OrderVisitor) Equal(e engine.EqualExpression) {
 }
 
 func (v *OrderVisitor) LessThan(e engine.LessThanExpression) {
-	fa := e.A.GetFieldName()
-	fb := e.B.GetFieldName()
-	if fa != ServiceAmountName && fb != ServiceAmountName {
+	fa := e.A.GetFieldNames()
+	fb := e.B.GetFieldNames()
+	if slices.Contains(fa, ServiceAmountName) || slices.Contains(fb, ServiceAmountName) {
 		return
 	}
 
-	if e.A.IsResolvable(EmptyEntity) && fb != engine.EmptyFieldName {
+	if e.A.IsResolvable(EmptyEntity) {
 		ra, _ := e.A.Resolve(EmptyEntity)
 		va, _ := ra.Value().(int64)
 		v.serviceAmountFrom = &va
 	}
 
-	if e.B.IsResolvable(EmptyEntity) && fa != engine.EmptyFieldName {
+	if e.B.IsResolvable(EmptyEntity) {
 		rb, _ := e.B.Resolve(EmptyEntity)
 		vb, _ := rb.Value().(int64)
 		v.serviceAmountTo = &vb
@@ -107,10 +108,14 @@ func (s ServiceDataSource) Retrieve(ctx context.Context, query engine.QueryExpre
 type DriverDataSource struct {
 }
 
-func (s DriverDataSource) Retrieve(ctx context.Context, query engine.QueryExpression, entities engine.Entities[OrderID]) (
+func (s *DriverDataSource) Retrieve(ctx context.Context, query engine.QueryExpression, entities engine.Entities[OrderID]) (
 	retrievableFields []engine.FieldName,
 	result engine.Entities[OrderID],
 	applies bool) {
+	fieldNames := query.FieldNames()
+	if !slices.Contains(fieldNames, DriverNameName) {
+		return nil, nil, false
+	}
 
 	id1 := OrderID("order_1")
 	e1 := engine.NewEntity(id1)
