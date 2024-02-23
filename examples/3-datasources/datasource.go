@@ -21,9 +21,8 @@ func (v *OrderVisitor) Exists(e engine.ExistsExpression) {
 }
 
 func (v *OrderVisitor) Equal(e engine.EqualExpression) {
-	fa := e.A.GetFieldNames()
-	fb := e.B.GetFieldNames()
-	if !slices.Contains(fa, ServiceAmountName) && !slices.Contains(fb, ServiceAmountName) {
+	if !((e.A.GetType() == engine.FieldExpressionType && e.A.(*engine.FieldValueExpression).FieldName == ServiceAmountName) ||
+		(e.B.GetType() == engine.FieldExpressionType && e.B.(*engine.FieldValueExpression).FieldName == ServiceAmountName)) {
 		return
 	}
 
@@ -43,9 +42,8 @@ func (v *OrderVisitor) Equal(e engine.EqualExpression) {
 }
 
 func (v *OrderVisitor) LessThan(e engine.LessThanExpression) {
-	fa := e.A.GetFieldNames()
-	fb := e.B.GetFieldNames()
-	if slices.Contains(fa, ServiceAmountName) || slices.Contains(fb, ServiceAmountName) {
+	if !((e.A.GetType() == engine.FieldExpressionType && e.A.(*engine.FieldValueExpression).FieldName == ServiceAmountName) ||
+		(e.B.GetType() == engine.FieldExpressionType && e.B.(*engine.FieldValueExpression).FieldName == ServiceAmountName)) {
 		return
 	}
 
