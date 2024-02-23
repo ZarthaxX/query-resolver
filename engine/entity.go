@@ -6,7 +6,6 @@ type FieldName = string
 
 const EmptyFieldName FieldName = ""
 
-// TODO: tenemos que definir una key para intersecar / unir
 type Entity[T comparable] struct {
 	id     T
 	fields map[FieldName]any
@@ -36,13 +35,42 @@ func (e Entity[T]) SeekField(f FieldName) (any, error) {
 	return ef, nil
 }
 
-func (e Entity[T]) IsFieldPresent(f FieldName) bool {
-	_, ok := e.fields[FieldName(f)]
-	return ok
+func (e Entity[T]) FieldExists(f FieldName) TruthValue {
+	v, ok := e.fields[FieldName(f)]
+	if !ok {
+		return Undefined
+	}
+
+	if _, ok = v.(UndefinedValue); ok {
+		return False
+	} else {
+		return True
+	}
 }
 
 func (e *Entity[T]) AddField(name FieldName, value any) {
 	e.fields[name] = value
 }
 
+func (e *Entity[T]) projectResultSchema(schema ResultSchema) Entity[T] {
+	schemaEntity := NewEmptyEntity[T]()
+	for _, f := range schema {
+		if e.FieldExists(f) != Undefined {
+			v, _ := e.SeekField(f)
+			schemaEntity.AddField(f, v)
+		}
+	}
+
+	return *schemaEntity
+}
+
 type Entities[T comparable] map[T]Entity[T]
+
+func (e *Entities[T]) projectResultSchema(schema ResultSchema) Entities[T] {
+	schemaEntities := Entities[T]{}
+	for k, v := range *e {
+		schemaEntities[k] = v.projectResultSchema(schema)
+	}
+
+	return schemaEntities
+}

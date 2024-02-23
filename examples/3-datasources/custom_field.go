@@ -44,6 +44,15 @@ func NewOrderType(v string) OrderType {
 	return engine.NewPrimitiveValue[string](v)
 }
 
+type DriverName = engine.PrimitiveValue[string]
+
+var DriverNameName engine.FieldName = "driver.name"
+var DriverNameField = engine.NewFieldValueExpression(DriverNameName)
+
+func NewDriverName(v string) DriverName {
+	return engine.NewPrimitiveValue[string](v)
+}
+
 func retrieveFieldExpression(name engine.FieldName) (engine.FieldValueExpression, bool) {
 	switch name {
 	case ServiceStartName:

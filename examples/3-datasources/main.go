@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/ZarthaxX/query-resolver/engine"
+	"github.com/ZarthaxX/query-resolver/parser"
 )
 
 func main() {
@@ -16,19 +17,25 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	query, err := engine.ParseQuery([]byte(rawQuery), retrieveFieldExpression)
+	query, err := parser.ParseQuery([]byte(rawQuery), retrieveFieldExpression)
 	if err != nil {
 		panic(err)
 	}
 
+	resultSchema := engine.NewResultSchema([]engine.FieldName{DriverNameName})
+
 	sources := []engine.DataSource[OrderID]{
 		OrderDataSource{},
 		ServiceDataSource{},
+		DriverDataSource{},
 	}
 
 	resolver := engine.NewExpressionResolver(sources)
 
-	entities, err := resolver.ProcessQuery(context.TODO(), query)
+	entities, solved, err := resolver.ProcessQuery(context.TODO(), query, resultSchema)
 	fmt.Println(entities)
-	fmt.Println(err)
+	fmt.Println(solved)
+	if err != nil {
+		panic(err)
+	}
 }

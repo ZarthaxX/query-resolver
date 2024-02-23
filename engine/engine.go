@@ -19,7 +19,7 @@ func (e QueryExpressionPartiallySolvableError) Error() string {
 }
 
 type DataSource[T comparable] interface {
-	Retrieve(query QueryExpression, entities Entities[T]) ([]FieldName, Entities[T], bool)
+	Retrieve(ctx context.Context, query QueryExpression, entities Entities[T]) ([]FieldName, Entities[T], bool)
 }
 
 type ExpressionResolver[T comparable] struct {
@@ -30,11 +30,23 @@ func NewExpressionResolver[T comparable](sources []DataSource[T]) *ExpressionRes
 	return &ExpressionResolver[T]{sources: sources}
 }
 
-func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExpression) (entities Entities[T], err error) {
-	entities = Entities[T]{}
+func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExpression, resultSchema ResultSchema) (
+	entities Entities[T],
+	solved bool,
+	err error,
+) {
+	entities, err = e.resolveQuery(ctx, query, Entities[T]{})
+	if err != nil {
+		return nil, false, err
+	}
+
+	return e.buildResultSchema(ctx, entities, resultSchema)
+}
+
+func (e *ExpressionResolver[T]) resolveQuery(ctx context.Context, query QueryExpression, entities Entities[T]) (Entities[T], error) {
 	var retrieved bool
 	for _, src := range e.sources {
-		_, entities, retrieved = src.Retrieve(query, entities)
+		_, entities, retrieved = src.Retrieve(ctx, query, entities)
 		if retrieved {
 			break
 		}
@@ -44,6 +56,7 @@ func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExp
 		return nil, ErrQueryExpressionUnsolvable
 	}
 
+	var err error
 	query, entities, err = e.applyQuery(query, entities)
 	if err != nil {
 		return nil, err
@@ -53,7 +66,7 @@ func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExp
 		var entitiesChanged bool
 		for _, source := range e.sources {
 			var sourceChangedEntities bool
-			entities, sourceChangedEntities, err = e.retrieveEntities(query, entities, source)
+			entities, sourceChangedEntities, err = e.retrieveEntities(ctx, query, entities, source)
 			if err != nil {
 				return nil, err
 			}
@@ -79,7 +92,7 @@ func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExp
 	return entities, nil
 }
 
-func (e *ExpressionResolver[T]) retrieveEntities(query QueryExpression, entities Entities[T], source DataSource[T]) (
+func (e *ExpressionResolver[T]) retrieveEntities(ctx context.Context, query QueryExpression, entities Entities[T], source DataSource[T]) (
 	Entities[T],
 	bool,
 	error,
@@ -87,7 +100,7 @@ func (e *ExpressionResolver[T]) retrieveEntities(query QueryExpression, entities
 	// entitiesChanged tells us if a new field was added to ANY entity
 	// if not, we can safely assume we cannot move from this state, so the expression will be unsolvable
 	var entitiesChanged bool
-	retrievableFields, retrievedEntities, ok := source.Retrieve(query, entities)
+	retrievableFields, retrievedEntities, ok := source.Retrieve(ctx, query, entities)
 	if !ok {
 		return entities, false, nil
 	}
@@ -103,7 +116,7 @@ func (e *ExpressionResolver[T]) retrieveEntities(query QueryExpression, entities
 		// if it did, we add the field to the actual one
 		// if not, we just add an empty field to it
 		for _, f := range retrievableFields {
-			if de.IsFieldPresent(f) && !entity.IsFieldPresent(f) {
+			if de.FieldExists(f) != Undefined {
 				v, err := de.SeekField(f)
 				if err != nil {
 					return nil, false, err
@@ -111,7 +124,7 @@ func (e *ExpressionResolver[T]) retrieveEntities(query QueryExpression, entities
 				entity.AddField(f, v)
 				entitiesChanged = true
 				continue
-			} else if !entity.IsFieldPresent(f) {
+			} else if entity.FieldExists(f) == Undefined {
 				entity.AddField(f, UndefinedValue{})
 				entitiesChanged = true
 			}
@@ -158,4 +171,26 @@ func (e *ExpressionResolver[T]) applyQuery(query QueryExpression, entities Entit
 	}
 
 	return newQuery, newEntities, nil
+}
+
+func (e *ExpressionResolver[T]) buildResultSchema(ctx context.Context, entities Entities[T], resultSchema ResultSchema) (
+	Entities[T],
+	bool,
+	error,
+) {
+	query := QueryExpression{}
+	for _, f := range resultSchema {
+		query = append(query, NewExistsExpression(f))
+	}
+
+	entities, err := e.resolveQuery(ctx, query, entities)
+	if err != nil {
+		if errors.As(err, &QueryExpressionPartiallySolvableError{}) {
+			return entities, false, nil
+		}
+
+		return nil, false, err
+	}
+
+	return entities.projectResultSchema(resultSchema), true, nil
 }
