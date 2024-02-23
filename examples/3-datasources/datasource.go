@@ -112,7 +112,7 @@ func (s *DriverDataSource) Retrieve(ctx context.Context, query engine.QueryExpre
 	retrievableFields []engine.FieldName,
 	result engine.Entities[OrderID],
 	applies bool) {
-	fieldNames := query.FieldNames()
+	fieldNames := query.GetFieldNames()
 	if !slices.Contains(fieldNames, DriverNameName) {
 		return nil, nil, false
 	}
