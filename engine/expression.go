@@ -12,7 +12,7 @@ var (
 
 type EntityInterface interface {
 	SeekField(f FieldName) (any, error)
-	IsFieldPresent(f FieldName) bool
+	FieldExists(f FieldName) TruthValue
 	AddField(name FieldName, value any)
 }
 
@@ -47,15 +47,16 @@ type ExpressionVisitorIntarface interface {
 }
 
 /*
-ExistsExpression takes a value and returns if it exists
+ExistsExpression takes a field value expression and returns if it exists
+It does not make sense to take a generic ValueExpression, because you just check existance of fields
 */
 type ExistsExpression struct {
-	A ValueExpression
+	Field FieldName
 }
 
-func NewExistsExpression(a ValueExpression) *ExistsExpression {
+func NewExistsExpression(field FieldName) *ExistsExpression {
 	return &ExistsExpression{
-		A: a,
+		Field: field,
 	}
 }
 
@@ -64,16 +65,11 @@ func (o *ExistsExpression) Resolve(e EntityInterface) (TruthValue, error) {
 		return Undefined, errUnresolvableExpression
 	}
 
-	va, err := o.A.Resolve(e)
-	if err != nil {
-		return False, err
-	}
-
-	return va.Equal(va)
+	return e.FieldExists(o.Field), nil
 }
 
 func (o *ExistsExpression) IsResolvable(e EntityInterface) bool {
-	return o.A.IsResolvable(e)
+	return e.FieldExists(o.Field) != Undefined
 }
 
 func (o *ExistsExpression) Visit(visitor ExpressionVisitorIntarface) {
@@ -270,7 +266,7 @@ func (o FieldValueExpression) Resolve(e EntityInterface) (res ComparableValue, e
 }
 
 func (o FieldValueExpression) IsResolvable(e EntityInterface) bool {
-	return e.IsFieldPresent(o.FieldName)
+	return e.FieldExists(o.FieldName) != Undefined
 }
 
 func (o FieldValueExpression) Visit(visitor ExpressionVisitorIntarface) {
