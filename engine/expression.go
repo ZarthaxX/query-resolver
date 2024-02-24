@@ -7,29 +7,34 @@ type ExpressionType string
 var (
 	errUnresolvableExpression = errors.New("tried resolving an unresolvable expression")
 
-	EqualExpressionType ExpressionType = "equal_operator"
+	ExistsExpressionType   ExpressionType = "exists"
+	EqualExpressionType    ExpressionType = "equal"
+	LessThanExpressionType ExpressionType = "less_than"
+	InExpressionType       ExpressionType = "in"
+	ConstExpressionType    ExpressionType = "const"
+	FieldExpressionType    ExpressionType = "field"
 )
 
 type EntityInterface interface {
-	SeekField(f FieldName) (any, error)
+	SeekField(f FieldName) (ComparableValue, error)
 	FieldExists(f FieldName) TruthValue
-	AddField(name FieldName, value any)
+	AddField(name FieldName, value ComparableValue)
 }
 
 type ValueExpression interface {
 	Resolve(e EntityInterface) (ComparableValue, error)
 	IsResolvable(e EntityInterface) bool // call this before Resolve to check if value can be resolvable and avoid errors
 	Visit(visitor ExpressionVisitorIntarface)
-	GetFieldName() FieldName
+	GetType() ExpressionType
 }
 
-type ComparisonExpressionInterface interface {
+type ComparisonExpression interface {
 	Resolve(e EntityInterface) (TruthValue, error)
 	IsResolvable(e EntityInterface) bool
 	Visit(visitor ExpressionVisitorIntarface)
 }
 
-type QueryExpression []ComparisonExpressionInterface
+type QueryExpression []ComparisonExpression
 
 func (e QueryExpression) Visit(visitor ExpressionVisitorIntarface) {
 	for _, expr := range e {
@@ -252,17 +257,7 @@ func (o FieldValueExpression) Resolve(e EntityInterface) (res ComparableValue, e
 		return nil, errUnresolvableExpression
 	}
 
-	v, err := e.SeekField(o.FieldName)
-	if err != nil {
-		return res, err
-	}
-
-	fv, ok := v.(ComparableValue)
-	if !ok {
-		return res, errors.New("type does not match")
-	}
-
-	return fv, nil
+	return e.SeekField(o.FieldName)
 }
 
 func (o FieldValueExpression) IsResolvable(e EntityInterface) bool {
@@ -273,16 +268,16 @@ func (o FieldValueExpression) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.Field(o)
 }
 
-func (o FieldValueExpression) GetFieldName() FieldName {
-	return o.FieldName
+func (o *FieldValueExpression) GetType() ExpressionType {
+	return FieldExpressionType
 }
 
 type ConstValueExpression struct {
 	value ComparableValue
 }
 
-func NewConstValueExpression(v ComparableValue) ConstValueExpression {
-	return ConstValueExpression{value: v}
+func NewConstValueExpression(v ComparableValue) *ConstValueExpression {
+	return &ConstValueExpression{value: v}
 }
 
 func (o ConstValueExpression) Resolve(e EntityInterface) (ComparableValue, error) {
@@ -297,6 +292,6 @@ func (o ConstValueExpression) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.Const(o)
 }
 
-func (o ConstValueExpression) GetFieldName() FieldName {
-	return EmptyFieldName
+func (o *ConstValueExpression) GetType() ExpressionType {
+	return ConstExpressionType
 }

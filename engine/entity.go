@@ -4,17 +4,15 @@ import "errors"
 
 type FieldName = string
 
-const EmptyFieldName FieldName = ""
-
 type Entity[T comparable] struct {
 	id     T
-	fields map[FieldName]any
+	fields map[FieldName]ComparableValue
 }
 
 func NewEntity[T comparable](id T) Entity[T] {
 	return Entity[T]{
 		id:     id,
-		fields: make(map[FieldName]any),
+		fields: make(map[FieldName]ComparableValue),
 	}
 }
 
@@ -22,11 +20,11 @@ func NewEmptyEntity[T comparable]() *Entity[T] {
 	var id T
 	return &Entity[T]{
 		id:     id,
-		fields: make(map[FieldName]any),
+		fields: make(map[FieldName]ComparableValue),
 	}
 }
 
-func (e Entity[T]) SeekField(f FieldName) (any, error) {
+func (e Entity[T]) SeekField(f FieldName) (ComparableValue, error) {
 	ef, ok := e.fields[FieldName(f)]
 	if !ok {
 		return nil, errors.New("field does not exist")
@@ -48,7 +46,7 @@ func (e Entity[T]) FieldExists(f FieldName) TruthValue {
 	}
 }
 
-func (e *Entity[T]) AddField(name FieldName, value any) {
+func (e *Entity[T]) AddField(name FieldName, value ComparableValue) {
 	e.fields[name] = value
 }
 
