@@ -20,8 +20,8 @@ func (v *OrderVisitor) Exists(e engine.ExistsExpression) {
 }
 
 func (v *OrderVisitor) Equal(e engine.EqualExpression) {
-	if !((e.A.GetType() == engine.FieldExpressionType && e.A.(*engine.FieldValueExpression).FieldName == ServiceAmountName) ||
-		(e.B.GetType() == engine.FieldExpressionType && e.B.(*engine.FieldValueExpression).FieldName == ServiceAmountName)) {
+	if !((e.A.GetFieldName() == ServiceAmountName) ||
+		(e.B.GetFieldName() == ServiceAmountName)) {
 		return
 	}
 
@@ -41,18 +41,18 @@ func (v *OrderVisitor) Equal(e engine.EqualExpression) {
 }
 
 func (v *OrderVisitor) LessThan(e engine.LessThanExpression) {
-	if !((e.A.GetType() == engine.FieldExpressionType && e.A.(*engine.FieldValueExpression).FieldName == ServiceAmountName) ||
-		(e.B.GetType() == engine.FieldExpressionType && e.B.(*engine.FieldValueExpression).FieldName == ServiceAmountName)) {
+	if !((e.A.GetFieldName() == ServiceAmountName) ||
+		(e.B.GetFieldName() == ServiceAmountName)) {
 		return
 	}
 
-	if e.A.IsResolvable(EmptyEntity) {
+	if e.A.IsConst() {
 		ra, _ := e.A.Resolve(EmptyEntity)
 		va, _ := ra.Value().(int64)
 		v.serviceAmountFrom = &va
 	}
 
-	if e.B.IsResolvable(EmptyEntity) {
+	if e.B.IsConst() {
 		rb, _ := e.B.Resolve(EmptyEntity)
 		vb, _ := rb.Value().(int64)
 		v.serviceAmountTo = &vb
