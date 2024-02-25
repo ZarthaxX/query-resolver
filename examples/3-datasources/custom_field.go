@@ -37,7 +37,7 @@ func NewOrderStatus(v string) OrderStatus {
 
 type OrderType = engine.PrimitiveValue[string]
 
-var OrderTypeName engine.FieldName = "order.service_type"
+var OrderTypeName engine.FieldName = "order.type"
 var OrderTypeField = engine.NewFieldValueExpression(OrderTypeName)
 
 func NewOrderType(v string) OrderType {

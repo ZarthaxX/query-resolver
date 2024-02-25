@@ -116,7 +116,7 @@ func (e *ExpressionResolver[T]) retrieveEntities(ctx context.Context, query Quer
 		// if it did, we add the field to the actual one
 		// if not, we just add an empty field to it
 		for _, f := range retrievableFields {
-			if de.FieldExists(f) != Undefined {
+			if de.FieldExists(f) != Undefined && entity.FieldExists(f) == Undefined {
 				v, err := de.SeekField(f)
 				if err != nil {
 					return nil, false, err
