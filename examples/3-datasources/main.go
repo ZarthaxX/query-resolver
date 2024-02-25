@@ -14,7 +14,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	query, err := parser.ParseQuery([]byte(rawQuery), retrieveFieldExpression)
+	query, err := parser.QueryFromJSON(rawQuery)
 	if err != nil {
 		panic(err)
 	}
@@ -23,7 +23,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 	resultSchema, err := parser.TemplateFromJSON(templateJSON)
 	if err != nil {
 		panic(err)

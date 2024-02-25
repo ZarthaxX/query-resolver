@@ -2,225 +2,216 @@ package parser
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
-	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ZarthaxX/query-resolver/engine"
 	"github.com/ZarthaxX/query-resolver/field"
 )
 
-type treeNodeDTO struct {
-	Exists *existsNodeDTO `json:"exists,omitempty"`
-	Equal  *equalNodeDTO  `json:"equal,omitempty"`
-	Range  *rangeNodeDTO  `json:"range,omitempty"`
-	In     *inNodeDTO     `json:"in,omitempty"`
+func QueryFromJSON(rawQuery []byte) ([]engine.ComparisonExpression, error) {
+	var queryExpression queryExpression
+	return queryExpression.operators, json.Unmarshal(rawQuery, &queryExpression)
 }
 
-type existsNodeDTO struct {
-	Field fieldNodeDTO `json:"field"`
+type queryExpression struct {
+	operators []engine.ComparisonExpression
 }
 
-type equalNodeDTO struct {
-	ValueA valueNodeDTO `json:"value_a"`
-	ValueB valueNodeDTO `json:"value_b"`
-}
-
-type rangeNodeDTO struct {
-	Value valueNodeDTO  `json:"value"`
-	From  *valueNodeDTO `json:"from,omitempty"`
-	To    *valueNodeDTO `json:"to,omitempty"`
-}
-
-type inNodeDTO struct {
-	Value valueNodeDTO   `json:"value"`
-	List  []valueNodeDTO `json:"values"`
-}
-
-type valueNodeDTO struct {
-	Const *constNodeDTO `json:"const,omitempty"`
-	Field *fieldNodeDTO `json:"field,omitempty"`
-	Time  *timeNodeDTO  `json:"time,omitempty"`
-}
-
-type constNodeDTO struct {
-	Type  string `json:"type"`
-	Value string `json:"value"`
-}
-
-type fieldNodeDTO struct {
-	Name string `json:"name"`
-}
-
-type timeNodeDTO struct {
-	Value  *int64 `json:"value,omitempty"`
-	Offset *int64 `json:"offset,omitempty"`
-}
-
-type valueExpressionRetriever func(name engine.FieldName) (*engine.FieldValueExpression, bool)
-
-func ParseQuery(rawQuery []byte, retriever valueExpressionRetriever) ([]engine.ComparisonExpression, error) {
-	var root []treeNodeDTO
-	if err := json.Unmarshal(rawQuery, &root); err != nil {
-		return nil, err
+func (q *queryExpression) UnmarshalJSON(b []byte) error {
+	var operators []*json.RawMessage
+	if err := json.Unmarshal(b, &operators); err != nil {
+		return err
 	}
 
-	query := make([]engine.ComparisonExpression, 0, len(root))
-	for _, e := range root {
-		operators, err := e.parse(retriever)
-		if err != nil {
-			return nil, err
+	q.operators = []engine.ComparisonExpression{}
+	for _, operator := range operators {
+		var op comparisonOperator
+		if err := json.Unmarshal(*operator, &op); err != nil {
+			return err
 		}
 
-		query = append(query, operators...)
+		q.operators = append(q.operators, op.operators...)
 	}
 
-	return query, nil
+	return nil
 }
 
-func (n treeNodeDTO) parse(retriever valueExpressionRetriever) ([]engine.ComparisonExpression, error) {
-	if n.Exists != nil {
-		op, err := n.Exists.parse(retriever)
-		if err != nil {
-			return nil, err
+type comparisonOperator struct {
+	operators []engine.ComparisonExpression
+}
+
+func (q *comparisonOperator) UnmarshalJSON(b []byte) error {
+	var fields map[string]*json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
+		return err
+	}
+
+	if rm, ok := fields["range"]; ok {
+		var rangeOp rangeOperator
+		if err := json.Unmarshal(*rm, &rangeOp); err != nil {
+			return err
 		}
-		return []engine.ComparisonExpression{op}, nil
-	} else if n.Equal != nil {
-		op, err := n.Equal.parse(retriever)
-		if err != nil {
-			return nil, err
+		q.operators = rangeOp.operators
+		return nil
+	}
+
+	if rm, ok := fields["equal"]; ok {
+		var equalOp equalOperator
+		if err := json.Unmarshal(*rm, &equalOp); err != nil {
+			return err
 		}
-		return []engine.ComparisonExpression{op}, nil
-	} else if n.Range != nil {
-		return n.Range.parse(retriever)
-	} else if n.In != nil {
-		op, err := n.In.parse(retriever)
-		if err != nil {
-			return nil, err
-		}
-		return []engine.ComparisonExpression{op}, nil
+		q.operators = append(q.operators, equalOp.operator)
+		return nil
 	}
 
-	return nil, errors.New("unmapped operator")
-}
-
-func (n existsNodeDTO) parse(retriever valueExpressionRetriever) (op *engine.ExistsExpression, err error) {
-	a, err := n.Field.parse(retriever)
-	if err != nil {
-		return nil, err
-	}
-
-	return engine.NewExistsExpression(a.FieldName), nil
-}
-
-func (n equalNodeDTO) parse(retriever valueExpressionRetriever) (op *engine.EqualExpression, err error) {
-	a, err := n.ValueA.parse(retriever)
-	if err != nil {
-		return nil, err
-	}
-
-	b, err := n.ValueB.parse(retriever)
-	if err != nil {
-		return nil, err
-	}
-
-	return engine.NewEqualExpression(a, b), nil
-}
-
-func (n rangeNodeDTO) parse(retriever valueExpressionRetriever) (op []engine.ComparisonExpression, err error) {
-	value, err := n.Value.parse(retriever)
-	if err != nil {
-		return nil, err
-	}
-
-	operators := []engine.ComparisonExpression{}
-	if n.From != nil {
-		from, err := n.From.parse(retriever)
-		if err != nil {
-			return nil, err
+	if rm, ok := fields["in"]; ok {
+		var inOp inOperator
+		if err := json.Unmarshal(*rm, &inOp); err != nil {
+			return err
 		}
 
-		operators = append(operators, engine.NewLessThanExpression(from, value))
+		q.operators = append(q.operators, inOp.operator)
+		return nil
 	}
 
-	if n.To != nil {
-		to, err := n.To.parse(retriever)
-		if err != nil {
-			return nil, err
+	return nil
+}
+
+type rangeOperator struct {
+	operators []engine.ComparisonExpression
+}
+
+func (q *rangeOperator) UnmarshalJSON(b []byte) error {
+	q.operators = []engine.ComparisonExpression{}
+
+	var fields map[string]*json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
+		return err
+	}
+
+	var v value
+	var from, to *value
+	if err := json.Unmarshal(*fields["value"], &v); err != nil {
+		return err
+	}
+	if fromB, ok := fields["from"]; ok {
+		if err := json.Unmarshal(*fromB, &from); err != nil {
+			return err
 		}
-
-		operators = append(operators, engine.NewLessThanExpression(value, to))
+		q.operators = append(q.operators, engine.NewLessThanExpression(from.value, v.value))
 	}
-
-	return operators, nil
-}
-
-func (n inNodeDTO) parse(retriever valueExpressionRetriever) (op *engine.InExpression, err error) {
-	v, err := n.Value.parse(retriever)
-	if err != nil {
-		return nil, err
-	}
-
-	list := []engine.ValueExpression{}
-	for _, e := range n.List {
-		expr, err := e.parse(retriever)
-		if err != nil {
-			return nil, err
+	if toB, ok := fields["to"]; ok {
+		if err := json.Unmarshal(*toB, &to); err != nil {
+			return err
 		}
-
-		list = append(list, expr)
+		q.operators = append(q.operators, engine.NewLessThanExpression(v.value, to.value))
 	}
 
-	return engine.NewInExpression(v, list), nil
+	return nil
 }
 
-func (n valueNodeDTO) parse(retriever valueExpressionRetriever) (engine.ValueExpression, error) {
-	if n.Field != nil {
-		return n.Field.parse(retriever)
-	} else if n.Const != nil {
-		return n.Const.parse()
-	} else if n.Time != nil {
-		return n.Time.parse()
-	} else {
-		return nil, errors.New("valueNodeDTO: no mapping specified")
+type equalOperator struct {
+	operator engine.ComparisonExpression
+}
+
+func (q *equalOperator) UnmarshalJSON(b []byte) error {
+	var fields map[string]*json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
+		return err
 	}
+
+	var va, vb value
+	if err := json.Unmarshal(*fields["value_a"], &va); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(*fields["value_b"], &vb); err != nil {
+		return err
+	}
+
+	q.operator = engine.NewEqualExpression(va.value, vb.value)
+
+	return nil
 }
 
-func (n constNodeDTO) parse() (*engine.ConstValueExpression, error) {
-	switch n.Type {
-	case "int":
-		c, err := strconv.ParseInt(n.Value, 10, 64)
-		if err != nil {
-			return nil, err
+type inOperator struct {
+	operator engine.ComparisonExpression
+}
+
+func (q *inOperator) UnmarshalJSON(b []byte) error {
+	var fields map[string]*json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
+		return err
+	}
+
+	var v value
+	if err := json.Unmarshal(*fields["value"], &v); err != nil {
+		return err
+	}
+
+	var list []*json.RawMessage
+	values := []engine.ValueExpression{}
+	if err := json.Unmarshal(*fields["values"], &list); err != nil {
+		return err
+	}
+
+	for _, elem := range list {
+		var e value
+		if err := json.Unmarshal(*elem, &e); err != nil {
+			return err
 		}
-		return engine.NewConstValueExpression(field.NewInt64Value(c)), nil
-	case "string":
-		return engine.NewConstValueExpression(field.NewStringValue(n.Value)), nil
-	default:
-		return nil, fmt.Errorf("constNodeDTO: no mapping specified for type %s", n.Type)
+		values = append(values, e.value)
 	}
+
+	q.operator = engine.NewInExpression(v.value, values)
+
+	return nil
 }
 
-func (n fieldNodeDTO) parse(retrieve valueExpressionRetriever) (*engine.FieldValueExpression, error) {
-	field, ok := retrieve(engine.FieldName(n.Name))
-	if !ok {
-		return nil, fmt.Errorf("fieldNodeDTO: no mapping specified for name %s", n.Name)
-	}
-
-	return field, nil
+type value struct {
+	value engine.ValueExpression
 }
 
-func (n timeNodeDTO) parse() (*engine.ConstValueExpression, error) {
-	var offset int64
-	if n.Offset != nil {
-		offset = *n.Offset
+func (q *value) UnmarshalJSON(b []byte) error {
+	var integer int64
+	if err := json.Unmarshal(b, &integer); err == nil {
+		q.value = engine.NewConstValueExpression(field.NewInt64Value(integer))
+		return nil
 	}
 
-	value := time.Now().Unix()
-	if n.Value != nil {
-		value = *n.Value
+	var float float64
+	if err := json.Unmarshal(b, &float); err == nil {
+		q.value = engine.NewConstValueExpression(field.NewFloat64Value(float))
+		return nil
 	}
 
-	return engine.NewConstValueExpression(field.NewInt64Value(value + offset)), nil
+	var v string
+	if err := json.Unmarshal(b, &v); err == nil {
+		if strings.HasPrefix(v, "@") {
+			q.value = engine.NewFieldValueExpression(v[1:])
+		} else if v == "$NOW" {
+			q.value = engine.NewConstValueExpression(field.NewInt64Value(time.Now().Unix()))
+		} else {
+			q.value = engine.NewConstValueExpression(field.NewStringValue(v))
+		}
+		return nil
+	}
+
+	var arithmeticOp arithmeticOperator
+	if err := json.Unmarshal(b, &arithmeticOp); err == nil {
+		return err
+	}
+
+	q.value = arithmeticOp.value
+
+	return nil
+
+}
+
+type arithmeticOperator struct {
+	value engine.ValueExpression
+}
+
+func (q *arithmeticOperator) UnmarshalJSON(b []byte) error {
+	return nil
 }
