@@ -72,6 +72,20 @@ func (t *Template) entityToMap(entity engine.EntityInterface) (res map[string]an
 	return res, nil
 }
 
+func (t *Template) EntitiesToJSON(entities ...engine.EntityInterface) ([]byte, error) {
+	entitiesMap := []map[string]any{}
+	for _, e := range entities {
+		entityMap, err := t.entityToMap(e)
+		if err != nil {
+			return nil, err
+		}
+
+		entitiesMap = append(entitiesMap, entityMap)
+	}
+
+	return json.MarshalIndent(entitiesMap, "", "	")
+}
+
 func (t *Template) EntityToJSON(entity engine.EntityInterface) ([]byte, error) {
 	entityMap, err := t.entityToMap(entity)
 	if err != nil {
