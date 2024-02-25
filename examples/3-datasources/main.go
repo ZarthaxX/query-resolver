@@ -27,7 +27,7 @@ func main() {
 	sources := []engine.DataSource[OrderID]{
 		OrderDataSource{},
 		ServiceDataSource{},
-		DriverDataSource{},
+		&DriverDataSource{},
 	}
 
 	resolver := engine.NewExpressionResolver(sources)

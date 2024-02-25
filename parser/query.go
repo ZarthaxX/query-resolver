@@ -59,13 +59,13 @@ type timeNodeDTO struct {
 
 type valueExpressionRetriever func(name engine.FieldName) (engine.FieldValueExpression, bool)
 
-func ParseQuery(rawQuery []byte, retriever valueExpressionRetriever) ([]engine.ComparisonExpressionInterface, error) {
+func ParseQuery(rawQuery []byte, retriever valueExpressionRetriever) ([]engine.ComparisonExpression, error) {
 	var root []treeNodeDTO
 	if err := json.Unmarshal(rawQuery, &root); err != nil {
 		return nil, err
 	}
 
-	query := make([]engine.ComparisonExpressionInterface, 0, len(root))
+	query := make([]engine.ComparisonExpression, 0, len(root))
 	for _, e := range root {
 		operators, err := e.parse(retriever)
 		if err != nil {
@@ -78,19 +78,19 @@ func ParseQuery(rawQuery []byte, retriever valueExpressionRetriever) ([]engine.C
 	return query, nil
 }
 
-func (n treeNodeDTO) parse(retriever valueExpressionRetriever) ([]engine.ComparisonExpressionInterface, error) {
+func (n treeNodeDTO) parse(retriever valueExpressionRetriever) ([]engine.ComparisonExpression, error) {
 	if n.Exists != nil {
 		op, err := n.Exists.parse(retriever)
 		if err != nil {
 			return nil, err
 		}
-		return []engine.ComparisonExpressionInterface{op}, nil
+		return []engine.ComparisonExpression{op}, nil
 	} else if n.Equal != nil {
 		op, err := n.Equal.parse(retriever)
 		if err != nil {
 			return nil, err
 		}
-		return []engine.ComparisonExpressionInterface{op}, nil
+		return []engine.ComparisonExpression{op}, nil
 	} else if n.Range != nil {
 		return n.Range.parse(retriever)
 	} else if n.In != nil {
@@ -98,22 +98,22 @@ func (n treeNodeDTO) parse(retriever valueExpressionRetriever) ([]engine.Compari
 		if err != nil {
 			return nil, err
 		}
-		return []engine.ComparisonExpressionInterface{op}, nil
+		return []engine.ComparisonExpression{op}, nil
 	}
 
 	return nil, errors.New("unmapped operator")
 }
 
-func (n existsNodeDTO) parse(retriever valueExpressionRetriever) (op engine.ComparisonExpressionInterface, err error) {
+func (n existsNodeDTO) parse(retriever valueExpressionRetriever) (op *engine.ExistsExpression, err error) {
 	a, err := n.Field.parse(retriever)
 	if err != nil {
 		return nil, err
 	}
 
-	return engine.NewExistsExpression(a.GetFieldName()), nil
+	return engine.NewExistsExpression(a.FieldName), nil
 }
 
-func (n equalNodeDTO) parse(retriever valueExpressionRetriever) (op engine.ComparisonExpressionInterface, err error) {
+func (n equalNodeDTO) parse(retriever valueExpressionRetriever) (op *engine.EqualExpression, err error) {
 	a, err := n.ValueA.parse(retriever)
 	if err != nil {
 		return nil, err
@@ -127,13 +127,13 @@ func (n equalNodeDTO) parse(retriever valueExpressionRetriever) (op engine.Compa
 	return engine.NewEqualExpression(a, b), nil
 }
 
-func (n rangeNodeDTO) parse(retriever valueExpressionRetriever) (op []engine.ComparisonExpressionInterface, err error) {
+func (n rangeNodeDTO) parse(retriever valueExpressionRetriever) (op []engine.ComparisonExpression, err error) {
 	value, err := n.Value.parse(retriever)
 	if err != nil {
 		return nil, err
 	}
 
-	operators := []engine.ComparisonExpressionInterface{}
+	operators := []engine.ComparisonExpression{}
 	if n.From != nil {
 		from, err := n.From.parse(retriever)
 		if err != nil {
@@ -155,7 +155,7 @@ func (n rangeNodeDTO) parse(retriever valueExpressionRetriever) (op []engine.Com
 	return operators, nil
 }
 
-func (n inNodeDTO) parse(retriever valueExpressionRetriever) (op engine.ComparisonExpressionInterface, err error) {
+func (n inNodeDTO) parse(retriever valueExpressionRetriever) (op *engine.InExpression, err error) {
 	v, err := n.Value.parse(retriever)
 	if err != nil {
 		return nil, err
@@ -186,7 +186,7 @@ func (n valueNodeDTO) parse(retriever valueExpressionRetriever) (engine.ValueExp
 	}
 }
 
-func (n constNodeDTO) parse() (engine.ValueExpression, error) {
+func (n constNodeDTO) parse() (*engine.ConstValueExpression, error) {
 	switch n.Type {
 	case "int":
 		c, err := strconv.ParseInt(n.Value, 10, 64)
@@ -201,16 +201,16 @@ func (n constNodeDTO) parse() (engine.ValueExpression, error) {
 	}
 }
 
-func (n fieldNodeDTO) parse(retrieve valueExpressionRetriever) (engine.ValueExpression, error) {
+func (n fieldNodeDTO) parse(retrieve valueExpressionRetriever) (*engine.FieldValueExpression, error) {
 	field, ok := retrieve(engine.FieldName(n.Name))
 	if !ok {
 		return nil, fmt.Errorf("fieldNodeDTO: no mapping specified for name %s", n.Name)
 	}
 
-	return field, nil
+	return &field, nil
 }
 
-func (n timeNodeDTO) parse() (engine.ValueExpression, error) {
+func (n timeNodeDTO) parse() (*engine.ConstValueExpression, error) {
 	var offset int64
 	if n.Offset != nil {
 		offset = *n.Offset
