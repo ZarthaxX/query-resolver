@@ -1,89 +1,35 @@
 [
     {
         "range": {
-            "value": {
-                "field": {
-                    "name": "service.start"
-                }
-            },
-            "to": {
-                "time": {
-                    "offset": 3600
-                }
-            }
+            "value": "@service.start",
+            "from": "$NOW"
         }
     },
     {
         "range": {
-            "value": {
-                "field": {
-                    "name": "service.amount"
-                }
-            },
-            "from": {
-                "const": {
-                    "type": "int",
-                    "value": "1"
-                }
-            },
-            "to": {
-                "const": {
-                    "type": "int",
-                    "value": "52"
-                }
-            }
+            "value": "@service.amount",
+            "from": 1,
+            "to": 52
         }
     },
     {
         "equal": {
-            "value_a": {
-                "const": {
-                    "type": "int",
-                    "value": "10"
-                }
-            },
-            "value_b": {
-                "field": {
-                    "name": "service.amount"
-                }
-            }
+            "value_a": 10,
+            "value_b": "@service.amount"
         }
     },
     {
         "equal": {
-            "value_a": {
-                "const": {
-                    "type": "string",
-                    "value": "open"
-                }
-            },
-            "value_b": {
-                "field": {
-                    "name": "order.status"
-                }
-            }
+            "value_a": "open",
+            "value_b": "@order.status"
         }
     },
     {
         "in": {
-            "value": {
-                "field": {
-                    "name": "order.service_type"
-                }
-            },
+            "value": "@order.type",
             "values": [
-                {
-                    "const": {
-                        "type": "string",
-                        "value": "door"
-                    }
-                },
-                {
-                    "const": {
-                        "type": "string",
-                        "value": "pickup"
-                    }
-                }
+                "door",
+                "pickup"
             ]
         }
     }

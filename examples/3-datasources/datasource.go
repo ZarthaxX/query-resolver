@@ -96,7 +96,7 @@ func (s ServiceDataSource) Retrieve(ctx context.Context, query engine.QueryExpre
 	id1 := OrderID("order_1")
 	e1 := engine.NewEntity(id1)
 	e1.AddField(ServiceAmountName, NewServiceAmount(10))
-	e1.AddField(ServiceStartName, NewServiceStart(time.Now().Unix()))
+	e1.AddField(ServiceStartName, NewServiceStart(time.Now().Add(-time.Minute).Unix()))
 	return []engine.FieldName{ServiceStartName, ServiceAmountName},
 		engine.Entities[OrderID]{id1: e1},
 		true

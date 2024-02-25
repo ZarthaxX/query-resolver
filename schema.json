@@ -1,7 +1,0 @@
-{
-    "order": {
-        "status": "order.status",
-        "type": "order.type"
-    },
-    "service_start": "service.start"
-}

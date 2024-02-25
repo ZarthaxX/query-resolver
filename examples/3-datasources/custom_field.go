@@ -56,7 +56,8 @@ func NewDriverName(v string) DriverName {
 	return field.NewPrimitiveValue[string](v)
 }
 
-func retrieveFieldExpression(name engine.FieldName) (*engine.FieldValueExpression, bool) {
+// TODO: return string type, and make a strong type system to avoid invalid expressions
+func retrieveFieldExpressionType(name engine.FieldName) (*engine.FieldValueExpression, bool) {
 	switch name {
 	case ServiceStartName:
 		return ServiceStartField, true
