@@ -2,6 +2,11 @@ package engine
 
 import "errors"
 
+// TODO: reorder in folder operator
+// ComparisonOperator interface
+// ArithmeticOperator interface
+// Rename expression -> operator
+
 type ExpressionType string
 
 var (
@@ -249,8 +254,8 @@ type FieldValueExpression struct {
 	FieldName FieldName
 }
 
-func NewFieldValueExpression(fieldName FieldName) FieldValueExpression {
-	return FieldValueExpression{
+func NewFieldValueExpression(fieldName FieldName) *FieldValueExpression {
+	return &FieldValueExpression{
 		FieldName: fieldName,
 	}
 }

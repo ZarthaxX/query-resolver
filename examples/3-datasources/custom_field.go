@@ -1,6 +1,9 @@
 package main
 
-import "github.com/ZarthaxX/query-resolver/engine"
+import (
+	"github.com/ZarthaxX/query-resolver/engine"
+	"github.com/ZarthaxX/query-resolver/field"
+)
 
 type OrderID string
 
@@ -8,52 +11,52 @@ func (o OrderID) Equal(other OrderID) bool {
 	return o == other
 }
 
-type ServiceStart = engine.PrimitiveValue[int64]
+type ServiceStart = field.PrimitiveValue[int64]
 
 var ServiceStartName engine.FieldName = "service.start"
 var ServiceStartField = engine.NewFieldValueExpression(ServiceStartName)
 
 func NewServiceStart(v int64) ServiceStart {
-	return engine.NewPrimitiveValue[int64](v)
+	return field.NewPrimitiveValue[int64](v)
 }
 
-type ServiceAmount = engine.PrimitiveValue[int64]
+type ServiceAmount = field.PrimitiveValue[int64]
 
 var ServiceAmountName engine.FieldName = "service.amount"
 var ServiceAmountField = engine.NewFieldValueExpression(ServiceAmountName)
 
 func NewServiceAmount(v int64) ServiceAmount {
-	return engine.NewPrimitiveValue[int64](v)
+	return field.NewPrimitiveValue[int64](v)
 }
 
-type OrderStatus = engine.PrimitiveValue[string]
+type OrderStatus = field.PrimitiveValue[string]
 
 var OrderStatusName engine.FieldName = "order.status"
 var OrderStatusField = engine.NewFieldValueExpression(OrderStatusName)
 
 func NewOrderStatus(v string) OrderStatus {
-	return engine.NewPrimitiveValue[string](v)
+	return field.NewPrimitiveValue[string](v)
 }
 
-type OrderType = engine.PrimitiveValue[string]
+type OrderType = field.PrimitiveValue[string]
 
 var OrderTypeName engine.FieldName = "order.type"
 var OrderTypeField = engine.NewFieldValueExpression(OrderTypeName)
 
 func NewOrderType(v string) OrderType {
-	return engine.NewPrimitiveValue[string](v)
+	return field.NewPrimitiveValue[string](v)
 }
 
-type DriverName = engine.PrimitiveValue[string]
+type DriverName = field.PrimitiveValue[string]
 
 var DriverNameName engine.FieldName = "driver.name"
 var DriverNameField = engine.NewFieldValueExpression(DriverNameName)
 
 func NewDriverName(v string) DriverName {
-	return engine.NewPrimitiveValue[string](v)
+	return field.NewPrimitiveValue[string](v)
 }
 
-func retrieveFieldExpression(name engine.FieldName) (engine.FieldValueExpression, bool) {
+func retrieveFieldExpression(name engine.FieldName) (*engine.FieldValueExpression, bool) {
 	switch name {
 	case ServiceStartName:
 		return ServiceStartField, true
@@ -64,6 +67,6 @@ func retrieveFieldExpression(name engine.FieldName) (engine.FieldValueExpression
 	case OrderTypeName:
 		return OrderTypeField, true
 	default:
-		return engine.FieldValueExpression{}, false
+		return nil, false
 	}
 }

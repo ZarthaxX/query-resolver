@@ -7,7 +7,6 @@ import (
 
 	"github.com/ZarthaxX/query-resolver/engine"
 	"github.com/ZarthaxX/query-resolver/parser"
-	"github.com/ZarthaxX/query-resolver/schema"
 )
 
 func main() {
@@ -25,7 +24,7 @@ func main() {
 		panic(err)
 	}
 
-	resultSchema, err := schema.TemplateFromJSON(templateJSON)
+	resultSchema, err := parser.TemplateFromJSON(templateJSON)
 	if err != nil {
 		panic(err)
 	}

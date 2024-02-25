@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ZarthaxX/query-resolver/engine"
+	"github.com/ZarthaxX/query-resolver/field"
 )
 
 type treeNodeDTO struct {
@@ -57,7 +58,7 @@ type timeNodeDTO struct {
 	Offset *int64 `json:"offset,omitempty"`
 }
 
-type valueExpressionRetriever func(name engine.FieldName) (engine.FieldValueExpression, bool)
+type valueExpressionRetriever func(name engine.FieldName) (*engine.FieldValueExpression, bool)
 
 func ParseQuery(rawQuery []byte, retriever valueExpressionRetriever) ([]engine.ComparisonExpression, error) {
 	var root []treeNodeDTO
@@ -193,9 +194,9 @@ func (n constNodeDTO) parse() (*engine.ConstValueExpression, error) {
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewConstValueExpression(engine.NewInt64Value(c)), nil
+		return engine.NewConstValueExpression(field.NewInt64Value(c)), nil
 	case "string":
-		return engine.NewConstValueExpression(engine.NewStringValue(n.Value)), nil
+		return engine.NewConstValueExpression(field.NewStringValue(n.Value)), nil
 	default:
 		return nil, fmt.Errorf("constNodeDTO: no mapping specified for type %s", n.Type)
 	}
@@ -207,7 +208,7 @@ func (n fieldNodeDTO) parse(retrieve valueExpressionRetriever) (*engine.FieldVal
 		return nil, fmt.Errorf("fieldNodeDTO: no mapping specified for name %s", n.Name)
 	}
 
-	return &field, nil
+	return field, nil
 }
 
 func (n timeNodeDTO) parse() (*engine.ConstValueExpression, error) {
@@ -221,5 +222,5 @@ func (n timeNodeDTO) parse() (*engine.ConstValueExpression, error) {
 		value = *n.Value
 	}
 
-	return engine.NewConstValueExpression(engine.NewInt64Value(value + offset)), nil
+	return engine.NewConstValueExpression(field.NewInt64Value(value + offset)), nil
 }
