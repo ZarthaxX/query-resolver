@@ -8,20 +8,19 @@ import (
 	"github.com/ZarthaxX/query-resolver/operator"
 )
 
-
 var EmptyEntity = engine.NewEmptyEntity[OrderID]()
 
 type OrderVisitor struct {
 	serviceAmountFrom, serviceAmountTo *int64
 }
 
-func (v *OrderVisitor) In(e operator.InExpression) {
+func (v *OrderVisitor) In(e operator.In) {
 }
 
-func (v *OrderVisitor) Exists(e operator.ExistsExpression) {
+func (v *OrderVisitor) Exists(e operator.Exists) {
 }
 
-func (v *OrderVisitor) Equal(e operator.EqualExpression) {
+func (v *OrderVisitor) Equal(e operator.Equal) {
 	if !((e.A.GetFieldName() == ServiceAmountName) ||
 		(e.B.GetFieldName() == ServiceAmountName)) {
 		return
@@ -42,7 +41,7 @@ func (v *OrderVisitor) Equal(e operator.EqualExpression) {
 	}
 }
 
-func (v *OrderVisitor) LessThan(e operator.LessThanExpression) {
+func (v *OrderVisitor) LessThan(e operator.LessThan) {
 	if !((e.A.GetFieldName() == ServiceAmountName) ||
 		(e.B.GetFieldName() == ServiceAmountName)) {
 		return
@@ -61,11 +60,11 @@ func (v *OrderVisitor) LessThan(e operator.LessThanExpression) {
 	}
 }
 
-func (v *OrderVisitor) Const(e operator.ConstValueExpression) {
+func (v *OrderVisitor) Const(e operator.Const) {
 
 }
 
-func (v *OrderVisitor) Field(e operator.FieldValueExpression) {
+func (v *OrderVisitor) Field(e operator.Field) {
 
 }
 

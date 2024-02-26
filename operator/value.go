@@ -5,25 +5,25 @@ import (
 	"github.com/ZarthaxX/query-resolver/value"
 )
 
-type ValueExpression interface {
-	Resolve(e Entity) (value.ComparableValue, error)
+type Value interface {
+	Resolve(e Entity) (value.Comparable, error)
 	IsResolvable(e Entity) bool // call this before Resolve to check if value can be resolvable and avoid errors
 	Visit(visitor ExpressionVisitorIntarface)
 	GetFieldName() value.FieldName
 	IsConst() bool
 }
 
-type FieldValueExpression struct {
+type Field struct {
 	FieldName value.FieldName
 }
 
-func NewFieldValueExpression(fieldName value.FieldName) *FieldValueExpression {
-	return &FieldValueExpression{
+func NewField(fieldName value.FieldName) *Field {
+	return &Field{
 		FieldName: fieldName,
 	}
 }
 
-func (o FieldValueExpression) Resolve(e Entity) (res value.ComparableValue, err error) {
+func (o Field) Resolve(e Entity) (res value.Comparable, err error) {
 	if !o.IsResolvable(e) {
 		return nil, errUnresolvableExpression
 	}
@@ -31,46 +31,46 @@ func (o FieldValueExpression) Resolve(e Entity) (res value.ComparableValue, err 
 	return e.SeekField(o.FieldName)
 }
 
-func (o FieldValueExpression) IsResolvable(e Entity) bool {
+func (o Field) IsResolvable(e Entity) bool {
 	return e.FieldExists(o.FieldName) != logic.Undefined
 }
 
-func (o FieldValueExpression) Visit(visitor ExpressionVisitorIntarface) {
+func (o Field) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.Field(o)
 }
 
-func (o *FieldValueExpression) GetFieldName() value.FieldName {
+func (o *Field) GetFieldName() value.FieldName {
 	return o.FieldName
 }
 
-func (o *FieldValueExpression) IsConst() bool {
+func (o *Field) IsConst() bool {
 	return false
 }
 
-type ConstValueExpression struct {
-	value value.ComparableValue
+type Const struct {
+	value value.Comparable
 }
 
-func NewConstValueExpression(v value.ComparableValue) *ConstValueExpression {
-	return &ConstValueExpression{value: v}
+func NewConst(v value.Comparable) *Const {
+	return &Const{value: v}
 }
 
-func (o ConstValueExpression) Resolve(e Entity) (value.ComparableValue, error) {
+func (o Const) Resolve(e Entity) (value.Comparable, error) {
 	return o.value, nil
 }
 
-func (o ConstValueExpression) IsResolvable(e Entity) bool {
+func (o Const) IsResolvable(e Entity) bool {
 	return true
 }
 
-func (o ConstValueExpression) Visit(visitor ExpressionVisitorIntarface) {
+func (o Const) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.Const(o)
 }
 
-func (o *ConstValueExpression) GetFieldName() value.FieldName {
+func (o *Const) GetFieldName() value.FieldName {
 	return ""
 }
 
-func (o *ConstValueExpression) IsConst() bool {
+func (o *Const) IsConst() bool {
 	return true
 }

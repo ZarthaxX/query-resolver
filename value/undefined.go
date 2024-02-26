@@ -2,27 +2,27 @@ package value
 
 import "github.com/ZarthaxX/query-resolver/logic"
 
-type ComparableValue interface {
-	Equal(ComparableValue) (logic.TruthValue, error)
-	Less(ComparableValue) (logic.TruthValue, error)
+type Comparable interface {
+	Equal(Comparable) (logic.TruthValue, error)
+	Less(Comparable) (logic.TruthValue, error)
 	Exists() bool
 	Value() any
 }
 
-type UndefinedValue struct{}
+type Undefined struct{}
 
-func (v UndefinedValue) Exists() bool {
+func (v Undefined) Exists() bool {
 	return false
 }
 
-func (v UndefinedValue) Equal(o ComparableValue) (logic.TruthValue, error) {
+func (v Undefined) Equal(o Comparable) (logic.TruthValue, error) {
 	return logic.Undefined, nil
 }
 
-func (v UndefinedValue) Less(o ComparableValue) (logic.TruthValue, error) {
+func (v Undefined) Less(o Comparable) (logic.TruthValue, error) {
 	return logic.Undefined, nil
 }
 
-func (v UndefinedValue) Value() any {
+func (v Undefined) Value() any {
 	return nil
 }

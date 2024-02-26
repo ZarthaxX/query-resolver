@@ -8,9 +8,9 @@ import (
 )
 
 type Entity interface {
-	SeekField(f value.FieldName) (value.ComparableValue, error)
+	SeekField(f value.FieldName) (value.Comparable, error)
 	FieldExists(f value.FieldName) logic.TruthValue
-	AddField(name value.FieldName, value value.ComparableValue)
+	AddField(name value.FieldName, value value.Comparable)
 }
 
 // TODO: reorder in folder operator
@@ -22,27 +22,27 @@ var (
 	errUnresolvableExpression = errors.New("tried resolving an unresolvable expression")
 )
 
-type ComparisonExpression interface {
+type Comparison interface {
 	Resolve(e Entity) (logic.TruthValue, error)
 	IsResolvable(e Entity) bool
 	Visit(visitor ExpressionVisitorIntarface)
 }
 
 /*
-ExistsExpression takes a field value expression and returns if it exists
-It does not make sense to take a generic ValueExpression, because you just check existance of fields
+Exists takes a field value expression and returns if it exists
+It does not make sense to take a generic Value, because you just check existance of fields
 */
-type ExistsExpression struct {
+type Exists struct {
 	Field value.FieldName
 }
 
-func NewExistsExpression(field value.FieldName) *ExistsExpression {
-	return &ExistsExpression{
+func NewExists(field value.FieldName) *Exists {
+	return &Exists{
 		Field: field,
 	}
 }
 
-func (o *ExistsExpression) Resolve(e Entity) (logic.TruthValue, error) {
+func (o *Exists) Resolve(e Entity) (logic.TruthValue, error) {
 	if !o.IsResolvable(e) {
 		return logic.Undefined, errUnresolvableExpression
 	}
@@ -50,29 +50,29 @@ func (o *ExistsExpression) Resolve(e Entity) (logic.TruthValue, error) {
 	return e.FieldExists(o.Field), nil
 }
 
-func (o *ExistsExpression) IsResolvable(e Entity) bool {
+func (o *Exists) IsResolvable(e Entity) bool {
 	return e.FieldExists(o.Field) != logic.Undefined
 }
 
-func (o *ExistsExpression) Visit(visitor ExpressionVisitorIntarface) {
+func (o *Exists) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.Exists(*o)
 }
 
 /*
-EqualExpression takes 2 values and returns if their values match
+Equal takes 2 values and returns if their values match
 */
-type EqualExpression struct {
-	A, B ValueExpression
+type Equal struct {
+	A, B Value
 }
 
-func NewEqualExpression(a, b ValueExpression) *EqualExpression {
-	return &EqualExpression{
+func NewEqual(a, b Value) *Equal {
+	return &Equal{
 		A: a,
 		B: b,
 	}
 }
 
-func (o *EqualExpression) Resolve(e Entity) (logic.TruthValue, error) {
+func (o *Equal) Resolve(e Entity) (logic.TruthValue, error) {
 	if !o.IsResolvable(e) {
 		return logic.Undefined, errUnresolvableExpression
 	}
@@ -90,11 +90,11 @@ func (o *EqualExpression) Resolve(e Entity) (logic.TruthValue, error) {
 	return va.Equal(vb)
 }
 
-func (o *EqualExpression) IsResolvable(e Entity) bool {
+func (o *Equal) IsResolvable(e Entity) bool {
 	return o.A.IsResolvable(e) && o.B.IsResolvable(e)
 }
 
-func (o *EqualExpression) Visit(visitor ExpressionVisitorIntarface) {
+func (o *Equal) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.Equal(*o)
 
 	o.A.Visit(visitor)
@@ -102,20 +102,20 @@ func (o *EqualExpression) Visit(visitor ExpressionVisitorIntarface) {
 }
 
 /*
-LessThanExpression takes 2 values and returns if a is less than b
+LessThan takes 2 values and returns if a is less than b
 */
-type LessThanExpression struct {
-	A, B ValueExpression
+type LessThan struct {
+	A, B Value
 }
 
-func NewLessThanExpression(a, b ValueExpression) *LessThanExpression {
-	return &LessThanExpression{
+func NewLessThan(a, b Value) *LessThan {
+	return &LessThan{
 		A: a,
 		B: b,
 	}
 }
 
-func (o *LessThanExpression) Resolve(e Entity) (logic.TruthValue, error) {
+func (o *LessThan) Resolve(e Entity) (logic.TruthValue, error) {
 	if !o.IsResolvable(e) {
 		return logic.Undefined, errUnresolvableExpression
 	}
@@ -133,11 +133,11 @@ func (o *LessThanExpression) Resolve(e Entity) (logic.TruthValue, error) {
 	return va.Less(vb)
 }
 
-func (o *LessThanExpression) IsResolvable(e Entity) bool {
+func (o *LessThan) IsResolvable(e Entity) bool {
 	return o.A.IsResolvable(e) && o.B.IsResolvable(e)
 }
 
-func (o *LessThanExpression) Visit(visitor ExpressionVisitorIntarface) {
+func (o *LessThan) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.LessThan(*o)
 
 	o.A.Visit(visitor)
@@ -145,21 +145,21 @@ func (o *LessThanExpression) Visit(visitor ExpressionVisitorIntarface) {
 }
 
 /*
-InExpression takes 2 values and returns if their values match
+In takes 2 values and returns if their values match
 */
-type InExpression struct {
-	A    ValueExpression
-	List []ValueExpression
+type In struct {
+	A    Value
+	List []Value
 }
 
-func NewInExpression(a ValueExpression, list []ValueExpression) *InExpression {
-	return &InExpression{
+func NewIn(a Value, list []Value) *In {
+	return &In{
 		A:    a,
 		List: list,
 	}
 }
 
-func (o *InExpression) Resolve(e Entity) (logic.TruthValue, error) {
+func (o *In) Resolve(e Entity) (logic.TruthValue, error) {
 	va, err := o.A.Resolve(e)
 	if err != nil {
 		return logic.False, err
@@ -192,7 +192,7 @@ func (o *InExpression) Resolve(e Entity) (logic.TruthValue, error) {
 	return logic.False, nil
 }
 
-func (o *InExpression) IsResolvable(e Entity) bool {
+func (o *In) IsResolvable(e Entity) bool {
 	// try resolving the expression, because we just need 1 resolvable expression that matches
 	// or in the worst case, we need every expression from the list because none match
 	if _, err := o.Resolve(e); err == errUnresolvableExpression {
@@ -202,7 +202,7 @@ func (o *InExpression) IsResolvable(e Entity) bool {
 	}
 }
 
-func (o *InExpression) Visit(visitor ExpressionVisitorIntarface) {
+func (o *In) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.In(*o)
 
 	o.A.Visit(visitor)

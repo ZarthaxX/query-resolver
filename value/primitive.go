@@ -7,22 +7,22 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type PrimitiveValue[T constraints.Ordered] struct {
+type Primitive[T constraints.Ordered] struct {
 	value T
 }
 
-func NewPrimitiveValue[T constraints.Ordered](v T) PrimitiveValue[T] {
-	return PrimitiveValue[T]{
+func NewPrimitive[T constraints.Ordered](v T) Primitive[T] {
+	return Primitive[T]{
 		value: v,
 	}
 }
 
-func (v PrimitiveValue[T]) Exists() bool {
+func (v Primitive[T]) Exists() bool {
 	return true
 }
 
-func (v PrimitiveValue[T]) Equal(o ComparableValue) (logic.TruthValue, error) {
-	ov, ok := o.(PrimitiveValue[T])
+func (v Primitive[T]) Equal(o Comparable) (logic.TruthValue, error) {
+	ov, ok := o.(Primitive[T])
 	if !ok {
 		return logic.False, errors.New("invalid type")
 	}
@@ -34,8 +34,8 @@ func (v PrimitiveValue[T]) Equal(o ComparableValue) (logic.TruthValue, error) {
 	return logic.TruthValueFromBool(v.value == ov.value), nil
 }
 
-func (v PrimitiveValue[T]) Less(o ComparableValue) (logic.TruthValue, error) {
-	ov, ok := o.(PrimitiveValue[T])
+func (v Primitive[T]) Less(o Comparable) (logic.TruthValue, error) {
+	ov, ok := o.(Primitive[T])
 	if !ok {
 		return logic.False, errors.New("invalid type")
 	}
@@ -47,24 +47,24 @@ func (v PrimitiveValue[T]) Less(o ComparableValue) (logic.TruthValue, error) {
 	return logic.TruthValueFromBool(v.value < ov.value), nil
 }
 
-func (v PrimitiveValue[T]) Value() any {
+func (v Primitive[T]) Value() any {
 	return v.value
 }
 
-type Int64Value = PrimitiveValue[int64]
+type Int64 = Primitive[int64]
 
-func NewInt64Value(v int64) Int64Value {
-	return NewPrimitiveValue[int64](v)
+func NewInt64(v int64) Int64 {
+	return NewPrimitive[int64](v)
 }
 
-type Float64Value = PrimitiveValue[float64]
+type Float64 = Primitive[float64]
 
-func NewFloat64Value(v float64) Float64Value {
-	return NewPrimitiveValue[float64](v)
+func NewFloat64(v float64) Float64 {
+	return NewPrimitive[float64](v)
 }
 
-type StringValue = PrimitiveValue[string]
+type String = Primitive[string]
 
-func NewStringValue(v string) StringValue {
-	return NewPrimitiveValue[string](v)
+func NewString(v string) String {
+	return NewPrimitive[string](v)
 }

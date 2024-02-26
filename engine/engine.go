@@ -128,7 +128,7 @@ func (e *ExpressionResolver[T]) retrieveEntities(ctx context.Context, query Quer
 				entitiesChanged = true
 				continue
 			} else if entity.FieldExists(f) == logic.Undefined {
-				entity.AddField(f, value.UndefinedValue{})
+				entity.AddField(f, value.Undefined{})
 				entitiesChanged = true
 			}
 
@@ -183,7 +183,7 @@ func (e *ExpressionResolver[T]) buildResultSchema(ctx context.Context, entities 
 ) {
 	query := QueryExpression{}
 	for _, f := range resultSchema {
-		query = append(query, operator.NewExistsExpression(f))
+		query = append(query, operator.NewExists(f))
 	}
 
 	entities, err := e.resolveQuery(ctx, query, entities)
