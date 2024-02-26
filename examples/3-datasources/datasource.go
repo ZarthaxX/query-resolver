@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"github.com/ZarthaxX/query-resolver/engine"
+	"github.com/ZarthaxX/query-resolver/operator"
 )
+
 
 var EmptyEntity = engine.NewEmptyEntity[OrderID]()
 
@@ -13,13 +15,13 @@ type OrderVisitor struct {
 	serviceAmountFrom, serviceAmountTo *int64
 }
 
-func (v *OrderVisitor) In(e engine.InExpression) {
+func (v *OrderVisitor) In(e operator.InExpression) {
 }
 
-func (v *OrderVisitor) Exists(e engine.ExistsExpression) {
+func (v *OrderVisitor) Exists(e operator.ExistsExpression) {
 }
 
-func (v *OrderVisitor) Equal(e engine.EqualExpression) {
+func (v *OrderVisitor) Equal(e operator.EqualExpression) {
 	if !((e.A.GetFieldName() == ServiceAmountName) ||
 		(e.B.GetFieldName() == ServiceAmountName)) {
 		return
@@ -40,7 +42,7 @@ func (v *OrderVisitor) Equal(e engine.EqualExpression) {
 	}
 }
 
-func (v *OrderVisitor) LessThan(e engine.LessThanExpression) {
+func (v *OrderVisitor) LessThan(e operator.LessThanExpression) {
 	if !((e.A.GetFieldName() == ServiceAmountName) ||
 		(e.B.GetFieldName() == ServiceAmountName)) {
 		return
@@ -59,11 +61,11 @@ func (v *OrderVisitor) LessThan(e engine.LessThanExpression) {
 	}
 }
 
-func (v *OrderVisitor) Const(e engine.ConstValueExpression) {
+func (v *OrderVisitor) Const(e operator.ConstValueExpression) {
 
 }
 
-func (v *OrderVisitor) Field(e engine.FieldValueExpression) {
+func (v *OrderVisitor) Field(e operator.FieldValueExpression) {
 
 }
 

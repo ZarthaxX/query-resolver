@@ -1,9 +1,9 @@
-package field
+package value
 
 import (
 	"errors"
 
-	"github.com/ZarthaxX/query-resolver/engine"
+	"github.com/ZarthaxX/query-resolver/logic"
 	"golang.org/x/exp/constraints"
 )
 
@@ -21,30 +21,30 @@ func (v PrimitiveValue[T]) Exists() bool {
 	return true
 }
 
-func (v PrimitiveValue[T]) Equal(o engine.ComparableValue) (engine.TruthValue, error) {
+func (v PrimitiveValue[T]) Equal(o ComparableValue) (logic.TruthValue, error) {
 	ov, ok := o.(PrimitiveValue[T])
 	if !ok {
-		return engine.False, errors.New("invalid type")
+		return logic.False, errors.New("invalid type")
 	}
 
 	if !v.Exists() || !o.Exists() {
-		return engine.Undefined, nil
+		return logic.Undefined, nil
 	}
 
-	return engine.TruthValueFromBool(v.value == ov.value), nil
+	return logic.TruthValueFromBool(v.value == ov.value), nil
 }
 
-func (v PrimitiveValue[T]) Less(o engine.ComparableValue) (engine.TruthValue, error) {
+func (v PrimitiveValue[T]) Less(o ComparableValue) (logic.TruthValue, error) {
 	ov, ok := o.(PrimitiveValue[T])
 	if !ok {
-		return engine.False, errors.New("invalid type")
+		return logic.False, errors.New("invalid type")
 	}
 
 	if !o.Exists() {
-		return engine.Undefined, nil
+		return logic.Undefined, nil
 	}
 
-	return engine.TruthValueFromBool(v.value < ov.value), nil
+	return logic.TruthValueFromBool(v.value < ov.value), nil
 }
 
 func (v PrimitiveValue[T]) Value() any {

@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/ZarthaxX/query-resolver/engine"
+	"github.com/ZarthaxX/query-resolver/operator"
 	"github.com/ZarthaxX/query-resolver/parser"
 )
 
@@ -42,7 +43,7 @@ func main() {
 	}
 	print("solved", solved)
 
-	res := []engine.EntityInterface{}
+	res := []operator.Entity{}
 	for _, e := range entities {
 		res = append(res, &e)
 	}

@@ -3,17 +3,19 @@ package parser
 import (
 	"encoding/json"
 
-	"github.com/ZarthaxX/query-resolver/engine"
+	"github.com/ZarthaxX/query-resolver/logic"
+	"github.com/ZarthaxX/query-resolver/operator"
+	"github.com/ZarthaxX/query-resolver/value"
 	"golang.org/x/exp/maps"
 )
 
 type Template struct {
-	fields map[string]engine.FieldName
+	fields map[string]value.FieldName
 	childs map[string]Template
 }
 
 func (s *Template) UnmarshalJSON(b []byte) error {
-	s.fields = map[string]engine.FieldName{}
+	s.fields = map[string]value.FieldName{}
 	s.childs = map[string]Template{}
 
 	names := map[string]*json.RawMessage{}
@@ -27,7 +29,7 @@ func (s *Template) UnmarshalJSON(b []byte) error {
 			if err := json.Unmarshal(*v, &fieldName); err != nil {
 				return err
 			}
-			s.fields[k] = engine.FieldName(fieldName)
+			s.fields[k] = value.FieldName(fieldName)
 		} else {
 			s.childs[k] = schema
 		}
@@ -35,11 +37,11 @@ func (s *Template) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (s *Template) GetResultSchema() engine.ResultSchema {
+func (s *Template) GetResultSchema() []value.FieldName {
 	return s.getFieldNames()
 }
 
-func (s *Template) getFieldNames() []engine.FieldName {
+func (s *Template) getFieldNames() []value.FieldName {
 	fieldNames := maps.Values(s.fields)
 	for _, c := range s.childs {
 		fieldNames = append(fieldNames, c.getFieldNames()...)
@@ -53,10 +55,10 @@ func TemplateFromJSON(data []byte) (Template, error) {
 	return template, json.Unmarshal(data, &template)
 }
 
-func (t *Template) entityToMap(entity engine.EntityInterface) (res map[string]any, err error) {
+func (t *Template) entityToMap(entity operator.Entity) (res map[string]any, err error) {
 	res = map[string]any{}
 	for f, fn := range t.fields {
-		if entity.FieldExists(fn) == engine.True {
+		if entity.FieldExists(fn) == logic.True {
 			cv, _ := entity.SeekField(fn)
 			res[f] = cv.Value()
 		}
@@ -72,7 +74,7 @@ func (t *Template) entityToMap(entity engine.EntityInterface) (res map[string]an
 	return res, nil
 }
 
-func (t *Template) EntitiesToJSON(entities ...engine.EntityInterface) ([]byte, error) {
+func (t *Template) EntitiesToJSON(entities ...operator.Entity) ([]byte, error) {
 	entitiesMap := []map[string]any{}
 	for _, e := range entities {
 		entityMap, err := t.entityToMap(e)
@@ -86,7 +88,7 @@ func (t *Template) EntitiesToJSON(entities ...engine.EntityInterface) ([]byte, e
 	return json.MarshalIndent(entitiesMap, "", "	")
 }
 
-func (t *Template) EntityToJSON(entity engine.EntityInterface) ([]byte, error) {
+func (t *Template) EntityToJSON(entity operator.Entity) ([]byte, error) {
 	entityMap, err := t.entityToMap(entity)
 	if err != nil {
 		return nil, err

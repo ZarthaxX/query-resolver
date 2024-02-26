@@ -5,17 +5,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ZarthaxX/query-resolver/engine"
-	"github.com/ZarthaxX/query-resolver/field"
+	"github.com/ZarthaxX/query-resolver/operator"
+	"github.com/ZarthaxX/query-resolver/value"
 )
 
-func QueryFromJSON(rawQuery []byte) ([]engine.ComparisonExpression, error) {
+func QueryFromJSON(rawQuery []byte) ([]operator.ComparisonExpression, error) {
 	var queryExpression queryExpression
 	return queryExpression.operators, json.Unmarshal(rawQuery, &queryExpression)
 }
 
 type queryExpression struct {
-	operators []engine.ComparisonExpression
+	operators []operator.ComparisonExpression
 }
 
 func (q *queryExpression) UnmarshalJSON(b []byte) error {
@@ -24,7 +24,7 @@ func (q *queryExpression) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	q.operators = []engine.ComparisonExpression{}
+	q.operators = []operator.ComparisonExpression{}
 	for _, operator := range operators {
 		var op comparisonOperator
 		if err := json.Unmarshal(*operator, &op); err != nil {
@@ -38,7 +38,7 @@ func (q *queryExpression) UnmarshalJSON(b []byte) error {
 }
 
 type comparisonOperator struct {
-	operators []engine.ComparisonExpression
+	operators []operator.ComparisonExpression
 }
 
 func (q *comparisonOperator) UnmarshalJSON(b []byte) error {
@@ -79,19 +79,19 @@ func (q *comparisonOperator) UnmarshalJSON(b []byte) error {
 }
 
 type rangeOperator struct {
-	operators []engine.ComparisonExpression
+	operators []operator.ComparisonExpression
 }
 
 func (q *rangeOperator) UnmarshalJSON(b []byte) error {
-	q.operators = []engine.ComparisonExpression{}
+	q.operators = []operator.ComparisonExpression{}
 
 	var fields map[string]*json.RawMessage
 	if err := json.Unmarshal(b, &fields); err != nil {
 		return err
 	}
 
-	var v value
-	var from, to *value
+	var v valueExpression
+	var from, to *valueExpression
 	if err := json.Unmarshal(*fields["value"], &v); err != nil {
 		return err
 	}
@@ -99,20 +99,20 @@ func (q *rangeOperator) UnmarshalJSON(b []byte) error {
 		if err := json.Unmarshal(*fromB, &from); err != nil {
 			return err
 		}
-		q.operators = append(q.operators, engine.NewLessThanExpression(from.value, v.value))
+		q.operators = append(q.operators, operator.NewLessThanExpression(from.value, v.value))
 	}
 	if toB, ok := fields["to"]; ok {
 		if err := json.Unmarshal(*toB, &to); err != nil {
 			return err
 		}
-		q.operators = append(q.operators, engine.NewLessThanExpression(v.value, to.value))
+		q.operators = append(q.operators, operator.NewLessThanExpression(v.value, to.value))
 	}
 
 	return nil
 }
 
 type equalOperator struct {
-	operator engine.ComparisonExpression
+	operator operator.ComparisonExpression
 }
 
 func (q *equalOperator) UnmarshalJSON(b []byte) error {
@@ -121,7 +121,7 @@ func (q *equalOperator) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	var va, vb value
+	var va, vb valueExpression
 	if err := json.Unmarshal(*fields["value_a"], &va); err != nil {
 		return err
 	}
@@ -129,13 +129,13 @@ func (q *equalOperator) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	q.operator = engine.NewEqualExpression(va.value, vb.value)
+	q.operator = operator.NewEqualExpression(va.value, vb.value)
 
 	return nil
 }
 
 type inOperator struct {
-	operator engine.ComparisonExpression
+	operator operator.ComparisonExpression
 }
 
 func (q *inOperator) UnmarshalJSON(b []byte) error {
@@ -144,55 +144,55 @@ func (q *inOperator) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	var v value
+	var v valueExpression
 	if err := json.Unmarshal(*fields["value"], &v); err != nil {
 		return err
 	}
 
 	var list []*json.RawMessage
-	values := []engine.ValueExpression{}
+	values := []operator.ValueExpression{}
 	if err := json.Unmarshal(*fields["values"], &list); err != nil {
 		return err
 	}
 
 	for _, elem := range list {
-		var e value
+		var e valueExpression
 		if err := json.Unmarshal(*elem, &e); err != nil {
 			return err
 		}
 		values = append(values, e.value)
 	}
 
-	q.operator = engine.NewInExpression(v.value, values)
+	q.operator = operator.NewInExpression(v.value, values)
 
 	return nil
 }
 
-type value struct {
-	value engine.ValueExpression
+type valueExpression struct {
+	value operator.ValueExpression
 }
 
-func (q *value) UnmarshalJSON(b []byte) error {
+func (q *valueExpression) UnmarshalJSON(b []byte) error {
 	var integer int64
 	if err := json.Unmarshal(b, &integer); err == nil {
-		q.value = engine.NewConstValueExpression(field.NewInt64Value(integer))
+		q.value = operator.NewConstValueExpression(value.NewInt64Value(integer))
 		return nil
 	}
 
 	var float float64
 	if err := json.Unmarshal(b, &float); err == nil {
-		q.value = engine.NewConstValueExpression(field.NewFloat64Value(float))
+		q.value = operator.NewConstValueExpression(value.NewFloat64Value(float))
 		return nil
 	}
 
 	var v string
 	if err := json.Unmarshal(b, &v); err == nil {
 		if strings.HasPrefix(v, "@") {
-			q.value = engine.NewFieldValueExpression(v[1:])
+			q.value = operator.NewFieldValueExpression(v[1:])
 		} else if v == "$NOW" {
-			q.value = engine.NewConstValueExpression(field.NewInt64Value(time.Now().Unix()))
+			q.value = operator.NewConstValueExpression(value.NewInt64Value(time.Now().Unix()))
 		} else {
-			q.value = engine.NewConstValueExpression(field.NewStringValue(v))
+			q.value = operator.NewConstValueExpression(value.NewStringValue(v))
 		}
 		return nil
 	}
@@ -209,7 +209,7 @@ func (q *value) UnmarshalJSON(b []byte) error {
 }
 
 type arithmeticOperator struct {
-	value engine.ValueExpression
+	value operator.ValueExpression
 }
 
 func (q *arithmeticOperator) UnmarshalJSON(b []byte) error {
