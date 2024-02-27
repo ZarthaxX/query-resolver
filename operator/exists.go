@@ -34,3 +34,11 @@ func (o *Exists) IsResolvable(e Entity) bool {
 func (o *Exists) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.Exists(*o)
 }
+
+func (o *Exists) IsConst() bool {
+	return false
+}
+
+func (o *Exists) GetFieldNames() []value.FieldName {
+	return []value.FieldName{o.Field}
+}

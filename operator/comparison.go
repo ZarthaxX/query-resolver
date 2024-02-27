@@ -26,6 +26,8 @@ type Comparison interface {
 	Resolve(e Entity) (logic.TruthValue, error)
 	IsResolvable(e Entity) bool
 	Visit(visitor ExpressionVisitorIntarface)
+	IsConst() bool
+	GetFieldNames() []value.FieldName
 }
 
 /*
@@ -71,6 +73,14 @@ func (o *Equal) Visit(visitor ExpressionVisitorIntarface) {
 	o.B.Visit(visitor)
 }
 
+func (o *Equal) IsConst() bool {
+	return o.A.IsConst() && o.B.IsConst()
+}
+
+func (o *Equal) GetFieldNames() []value.FieldName {
+	return append(o.A.GetFieldNames(), o.B.GetFieldNames()...)
+}
+
 /*
 LessThan takes 2 values and returns if a is less than b
 */
@@ -112,6 +122,14 @@ func (o *LessThan) Visit(visitor ExpressionVisitorIntarface) {
 
 	o.A.Visit(visitor)
 	o.B.Visit(visitor)
+}
+
+func (o *LessThan) IsConst() bool {
+	return o.A.IsConst() && o.B.IsConst()
+}
+
+func (o *LessThan) GetFieldNames() []value.FieldName {
+	return append(o.A.GetFieldNames(), o.B.GetFieldNames()...)
 }
 
 /*
@@ -180,6 +198,25 @@ func (o *In) Visit(visitor ExpressionVisitorIntarface) {
 	for _, elem := range o.List {
 		elem.Visit(visitor)
 	}
+}
+
+func (o *In) IsConst() bool {
+	for _, e := range o.List {
+		if !e.IsConst() {
+			return false
+		}
+	}
+
+	return o.A.IsConst()
+}
+
+func (o *In) GetFieldNames() []value.FieldName {
+	fieldNames := o.A.GetFieldNames()
+	for _, e := range o.List {
+		fieldNames = append(fieldNames, e.GetFieldNames()...)
+	}
+
+	return fieldNames
 }
 
 // TODO: ContainsExpression and NotExists

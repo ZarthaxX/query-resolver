@@ -21,8 +21,7 @@ func (v *OrderVisitor) Exists(e operator.Exists) {
 }
 
 func (v *OrderVisitor) Equal(e operator.Equal) {
-	if !((e.A.GetFieldName() == ServiceAmountName) ||
-		(e.B.GetFieldName() == ServiceAmountName)) {
+	if !(e.A.IsField(ServiceAmountName) || e.B.IsField(ServiceAmountName)) {
 		return
 	}
 
@@ -42,8 +41,7 @@ func (v *OrderVisitor) Equal(e operator.Equal) {
 }
 
 func (v *OrderVisitor) LessThan(e operator.LessThan) {
-	if !((e.A.GetFieldName() == ServiceAmountName) ||
-		(e.B.GetFieldName() == ServiceAmountName)) {
+	if !(e.A.IsField(ServiceAmountName) || e.B.IsField(ServiceAmountName)) {
 		return
 	}
 
