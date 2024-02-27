@@ -2,7 +2,8 @@ package main
 
 import (
 	"github.com/ZarthaxX/query-resolver/engine"
-	"github.com/ZarthaxX/query-resolver/field"
+	"github.com/ZarthaxX/query-resolver/operator"
+	"github.com/ZarthaxX/query-resolver/value"
 )
 
 type OrderID string
@@ -11,63 +12,47 @@ func (o OrderID) Equal(other OrderID) bool {
 	return o == other
 }
 
-type ServiceStart = field.PrimitiveValue[int64]
+type ServiceStart = value.Primitive[int64]
 
 var ServiceStartName engine.FieldName = "service.start"
-var ServiceStartField = engine.NewFieldValueExpression(ServiceStartName)
+var ServiceStartField = operator.NewField(ServiceStartName)
 
 func NewServiceStart(v int64) ServiceStart {
-	return field.NewPrimitiveValue[int64](v)
+	return value.NewPrimitive[int64](v)
 }
 
-type ServiceAmount = field.PrimitiveValue[int64]
+type ServiceAmount = value.Primitive[int64]
 
 var ServiceAmountName engine.FieldName = "service.amount"
-var ServiceAmountField = engine.NewFieldValueExpression(ServiceAmountName)
+var ServiceAmountField = operator.NewField(ServiceAmountName)
 
 func NewServiceAmount(v int64) ServiceAmount {
-	return field.NewPrimitiveValue[int64](v)
+	return value.NewPrimitive[int64](v)
 }
 
-type OrderStatus = field.PrimitiveValue[string]
+type OrderStatus = value.Primitive[string]
 
 var OrderStatusName engine.FieldName = "order.status"
-var OrderStatusField = engine.NewFieldValueExpression(OrderStatusName)
+var OrderStatusField = operator.NewField(OrderStatusName)
 
 func NewOrderStatus(v string) OrderStatus {
-	return field.NewPrimitiveValue[string](v)
+	return value.NewPrimitive[string](v)
 }
 
-type OrderType = field.PrimitiveValue[string]
+type OrderType = value.Primitive[string]
 
 var OrderTypeName engine.FieldName = "order.type"
-var OrderTypeField = engine.NewFieldValueExpression(OrderTypeName)
+var OrderTypeField = operator.NewField(OrderTypeName)
 
 func NewOrderType(v string) OrderType {
-	return field.NewPrimitiveValue[string](v)
+	return value.NewPrimitive[string](v)
 }
 
-type DriverName = field.PrimitiveValue[string]
+type DriverName = value.Primitive[string]
 
 var DriverNameName engine.FieldName = "driver.name"
-var DriverNameField = engine.NewFieldValueExpression(DriverNameName)
+var DriverNameField = operator.NewField(DriverNameName)
 
 func NewDriverName(v string) DriverName {
-	return field.NewPrimitiveValue[string](v)
-}
-
-// TODO: return string type, and make a strong type system to avoid invalid expressions
-func retrieveFieldExpressionType(name engine.FieldName) (*engine.FieldValueExpression, bool) {
-	switch name {
-	case ServiceStartName:
-		return ServiceStartField, true
-	case ServiceAmountName:
-		return ServiceAmountField, true
-	case OrderStatusName:
-		return OrderStatusField, true
-	case OrderTypeName:
-		return OrderTypeField, true
-	default:
-		return nil, false
-	}
+	return value.NewPrimitive[string](v)
 }

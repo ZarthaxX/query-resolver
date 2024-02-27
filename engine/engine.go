@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ZarthaxX/query-resolver/logic"
+	"github.com/ZarthaxX/query-resolver/operator"
+	"github.com/ZarthaxX/query-resolver/value"
 	"golang.org/x/exp/maps"
 )
 
@@ -116,7 +119,7 @@ func (e *ExpressionResolver[T]) retrieveEntities(ctx context.Context, query Quer
 		// if it did, we add the field to the actual one
 		// if not, we just add an empty field to it
 		for _, f := range retrievableFields {
-			if de.FieldExists(f) != Undefined && entity.FieldExists(f) == Undefined {
+			if de.FieldExists(f) != logic.Undefined && entity.FieldExists(f) == logic.Undefined {
 				v, err := de.SeekField(f)
 				if err != nil {
 					return nil, false, err
@@ -124,8 +127,8 @@ func (e *ExpressionResolver[T]) retrieveEntities(ctx context.Context, query Quer
 				entity.AddField(f, v)
 				entitiesChanged = true
 				continue
-			} else if entity.FieldExists(f) == Undefined {
-				entity.AddField(f, UndefinedValue{})
+			} else if entity.FieldExists(f) == logic.Undefined {
+				entity.AddField(f, value.Undefined{})
 				entitiesChanged = true
 			}
 
@@ -158,7 +161,7 @@ func (e *ExpressionResolver[T]) applyQuery(query QueryExpression, entities Entit
 				}
 
 				// If we got UNDEFINED or FALSE, then this entity does not apply
-				if ok != True {
+				if ok != logic.True {
 					filterEntity = true
 					break
 				}
@@ -180,7 +183,7 @@ func (e *ExpressionResolver[T]) buildResultSchema(ctx context.Context, entities 
 ) {
 	query := QueryExpression{}
 	for _, f := range resultSchema {
-		query = append(query, NewExistsExpression(f))
+		query = append(query, operator.NewExists(f))
 	}
 
 	entities, err := e.resolveQuery(ctx, query, entities)

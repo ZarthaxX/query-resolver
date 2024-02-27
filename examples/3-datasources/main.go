@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/ZarthaxX/query-resolver/engine"
+	"github.com/ZarthaxX/query-resolver/operator"
 	"github.com/ZarthaxX/query-resolver/parser"
 )
 
@@ -42,8 +43,11 @@ func main() {
 	}
 	print("solved", solved)
 
-	entityResult := entities[OrderID("order_1")]
-	resJSON, err := resultSchema.EntityToJSON(&entityResult)
+	res := []operator.Entity{}
+	for _, e := range entities {
+		res = append(res, &e)
+	}
+	resJSON, err := resultSchema.EntitiesToJSON(res...)
 	if err != nil {
 		panic(err)
 	}
