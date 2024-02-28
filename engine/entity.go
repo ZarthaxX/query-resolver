@@ -11,13 +11,13 @@ type FieldName = string
 
 type Entity[T comparable] struct {
 	id     T
-	fields map[FieldName]value.Comparable
+	fields map[FieldName]value.Value
 }
 
 func NewEntity[T comparable](id T) Entity[T] {
 	return Entity[T]{
 		id:     id,
-		fields: make(map[FieldName]value.Comparable),
+		fields: make(map[FieldName]value.Value),
 	}
 }
 
@@ -25,11 +25,11 @@ func NewEmptyEntity[T comparable]() *Entity[T] {
 	var id T
 	return &Entity[T]{
 		id:     id,
-		fields: make(map[FieldName]value.Comparable),
+		fields: make(map[FieldName]value.Value),
 	}
 }
 
-func (e Entity[T]) SeekField(f FieldName) (value.Comparable, error) {
+func (e Entity[T]) SeekField(f FieldName) (value.Value, error) {
 	ef, ok := e.fields[FieldName(f)]
 	if !ok {
 		return nil, errors.New("field does not exist")
@@ -51,7 +51,7 @@ func (e Entity[T]) FieldExists(f FieldName) logic.TruthValue {
 	}
 }
 
-func (e *Entity[T]) AddField(name FieldName, value value.Comparable) {
+func (e *Entity[T]) AddField(name FieldName, value value.Value) {
 	e.fields[name] = value
 }
 

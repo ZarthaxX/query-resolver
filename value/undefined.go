@@ -2,9 +2,10 @@ package value
 
 import "github.com/ZarthaxX/query-resolver/logic"
 
-type Comparable interface {
-	Equal(Comparable) (logic.TruthValue, error)
-	Less(Comparable) (logic.TruthValue, error)
+type Value interface {
+	Sum(Value) (Value, error)
+	Equal(Value) (logic.TruthValue, error)
+	Less(Value) (logic.TruthValue, error)
 	Exists() bool
 	Value() any
 }
@@ -15,11 +16,15 @@ func (v Undefined) Exists() bool {
 	return false
 }
 
-func (v Undefined) Equal(o Comparable) (logic.TruthValue, error) {
+func (v Undefined) Sum(o Value) (Value, error) {
+	return v, nil
+}
+
+func (v Undefined) Equal(o Value) (logic.TruthValue, error) {
 	return logic.Undefined, nil
 }
 
-func (v Undefined) Less(o Comparable) (logic.TruthValue, error) {
+func (v Undefined) Less(o Value) (logic.TruthValue, error) {
 	return logic.Undefined, nil
 }
 

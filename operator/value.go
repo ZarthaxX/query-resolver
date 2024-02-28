@@ -6,7 +6,7 @@ import (
 )
 
 type Value interface {
-	Resolve(e Entity) (value.Comparable, error)
+	Resolve(e Entity) (value.Value, error)
 	IsResolvable(e Entity) bool // call this before Resolve to check if value can be resolvable and avoid errors
 	Visit(visitor ExpressionVisitorIntarface)
 	GetFieldNames() []value.FieldName
@@ -24,7 +24,7 @@ func NewField(fieldName value.FieldName) *Field {
 	}
 }
 
-func (o Field) Resolve(e Entity) (res value.Comparable, err error) {
+func (o Field) Resolve(e Entity) (res value.Value, err error) {
 	if !o.IsResolvable(e) {
 		return nil, errUnresolvableExpression
 	}
@@ -53,14 +53,14 @@ func (o *Field) IsField(f value.FieldName) bool {
 }
 
 type Const struct {
-	value value.Comparable
+	value value.Value
 }
 
-func NewConst(v value.Comparable) *Const {
+func NewConst(v value.Value) *Const {
 	return &Const{value: v}
 }
 
-func (o Const) Resolve(e Entity) (value.Comparable, error) {
+func (o Const) Resolve(e Entity) (value.Value, error) {
 	return o.value, nil
 }
 

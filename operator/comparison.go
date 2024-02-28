@@ -8,9 +8,9 @@ import (
 )
 
 type Entity interface {
-	SeekField(f value.FieldName) (value.Comparable, error)
+	SeekField(f value.FieldName) (value.Value, error)
 	FieldExists(f value.FieldName) logic.TruthValue
-	AddField(name value.FieldName, value value.Comparable)
+	AddField(name value.FieldName, value value.Value)
 }
 
 // TODO: reorder in folder operator
