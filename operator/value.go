@@ -6,9 +6,8 @@ import (
 )
 
 type Value interface {
-	Resolve(e Entity) (value.Comparable, error)
+	Resolve(e Entity) (value.Value, error)
 	IsResolvable(e Entity) bool // call this before Resolve to check if value can be resolvable and avoid errors
-	Visit(visitor ExpressionVisitorIntarface)
 	GetFieldNames() []value.FieldName
 	IsConst() bool
 	IsField(value.FieldName) bool
@@ -24,7 +23,7 @@ func NewField(fieldName value.FieldName) *Field {
 	}
 }
 
-func (o Field) Resolve(e Entity) (res value.Comparable, err error) {
+func (o Field) Resolve(e Entity) (res value.Value, err error) {
 	if !o.IsResolvable(e) {
 		return nil, errUnresolvableExpression
 	}
@@ -34,10 +33,6 @@ func (o Field) Resolve(e Entity) (res value.Comparable, err error) {
 
 func (o Field) IsResolvable(e Entity) bool {
 	return e.FieldExists(o.FieldName) != logic.Undefined
-}
-
-func (o Field) Visit(visitor ExpressionVisitorIntarface) {
-	visitor.Field(o)
 }
 
 func (o *Field) GetFieldNames() []value.FieldName {
@@ -53,23 +48,19 @@ func (o *Field) IsField(f value.FieldName) bool {
 }
 
 type Const struct {
-	value value.Comparable
+	value value.Value
 }
 
-func NewConst(v value.Comparable) *Const {
+func NewConst(v value.Value) *Const {
 	return &Const{value: v}
 }
 
-func (o Const) Resolve(e Entity) (value.Comparable, error) {
+func (o Const) Resolve(e Entity) (value.Value, error) {
 	return o.value, nil
 }
 
 func (o Const) IsResolvable(e Entity) bool {
 	return true
-}
-
-func (o Const) Visit(visitor ExpressionVisitorIntarface) {
-	visitor.Const(o)
 }
 
 func (o *Const) GetFieldNames() []value.FieldName {

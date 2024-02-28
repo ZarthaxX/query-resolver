@@ -2,6 +2,7 @@ package parser
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"time"
 
@@ -65,6 +66,24 @@ func (q *comparisonOperator) UnmarshalJSON(b []byte) error {
 		return nil
 	}
 
+	if rm, ok := fields["exists"]; ok {
+		var existsOp existsOperator
+		if err := json.Unmarshal(*rm, &existsOp); err != nil {
+			return err
+		}
+		q.operators = append(q.operators, existsOp.operator)
+		return nil
+	}
+
+	if rm, ok := fields["not_exists"]; ok {
+		var notExistsOp notExistsOperator
+		if err := json.Unmarshal(*rm, &notExistsOp); err != nil {
+			return err
+		}
+		q.operators = append(q.operators, notExistsOp.operator)
+		return nil
+	}
+
 	if rm, ok := fields["in"]; ok {
 		var inOp inOperator
 		if err := json.Unmarshal(*rm, &inOp); err != nil {
@@ -111,6 +130,56 @@ func (q *rangeOperator) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+type existsOperator struct {
+	operator operator.Comparison
+}
+
+func (q *existsOperator) UnmarshalJSON(b []byte) error {
+	var fields map[string]*json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
+		return err
+	}
+
+	var field value.FieldName
+	if err := json.Unmarshal(*fields["field"], &field); err != nil {
+		return err
+	}
+
+	if !strings.HasPrefix(field, "@") {
+		return errors.New("value is not a field")
+	}
+	field = field[1:]
+
+	q.operator = operator.NewExists(field)
+
+	return nil
+}
+
+type notExistsOperator struct {
+	operator operator.Comparison
+}
+
+func (q *notExistsOperator) UnmarshalJSON(b []byte) error {
+	var fields map[string]*json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
+		return err
+	}
+
+	var field value.FieldName
+	if err := json.Unmarshal(*fields["field"], &field); err != nil {
+		return err
+	}
+
+	if !strings.HasPrefix(field, "@") {
+		return errors.New("value is not a field")
+	}
+	field = field[1:]
+
+	q.operator = operator.NewNotExists(field)
+
+	return nil
+}
+
 type equalOperator struct {
 	operator operator.Comparison
 }
@@ -130,6 +199,29 @@ func (q *equalOperator) UnmarshalJSON(b []byte) error {
 	}
 
 	q.operator = operator.NewEqual(va.value, vb.value)
+
+	return nil
+}
+
+type sumOperator struct {
+	operator operator.Value
+}
+
+func (q *sumOperator) UnmarshalJSON(b []byte) error {
+	var fields map[string]*json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
+		return err
+	}
+
+	var va, vb valueExpression
+	if err := json.Unmarshal(*fields["value_a"], &va); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(*fields["value_b"], &vb); err != nil {
+		return err
+	}
+
+	q.operator = operator.NewSum(va.value, vb.value)
 
 	return nil
 }
@@ -173,6 +265,12 @@ type valueExpression struct {
 }
 
 func (q *valueExpression) UnmarshalJSON(b []byte) error {
+	var boolean bool
+	if err := json.Unmarshal(b, &boolean); err == nil {
+		q.value = operator.NewConst(value.NewBool(boolean))
+		return nil
+	}
+
 	var integer int64
 	if err := json.Unmarshal(b, &integer); err == nil {
 		q.value = operator.NewConst(value.NewInt64(integer))
@@ -198,7 +296,7 @@ func (q *valueExpression) UnmarshalJSON(b []byte) error {
 	}
 
 	var arithmeticOp arithmeticOperator
-	if err := json.Unmarshal(b, &arithmeticOp); err == nil {
+	if err := json.Unmarshal(b, &arithmeticOp); err != nil {
 		return err
 	}
 
@@ -213,5 +311,19 @@ type arithmeticOperator struct {
 }
 
 func (q *arithmeticOperator) UnmarshalJSON(b []byte) error {
+	var fields map[string]*json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
+		return err
+	}
+
+	if rm, ok := fields["sum"]; ok {
+		var sumOp sumOperator
+		if err := json.Unmarshal(*rm, &sumOp); err != nil {
+			return err
+		}
+		q.value = sumOp.operator
+		return nil
+	}
+
 	return nil
 }
