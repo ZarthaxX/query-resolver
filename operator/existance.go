@@ -42,3 +42,26 @@ func (o *Exists) IsConst() bool {
 func (o *Exists) GetFieldNames() []value.FieldName {
 	return []value.FieldName{o.Field}
 }
+
+/*
+NotExists takes a field value expression and returns if it exists
+It does not make sense to take a generic Value, because you just check existance of fields
+*/
+type NotExists struct {
+	Exists
+}
+
+func NewNotExists(field value.FieldName) *NotExists {
+	return &NotExists{
+		*NewExists(field),
+	}
+}
+
+func (o *NotExists) Resolve(e Entity) (logic.TruthValue, error) {
+	tv, err := o.Exists.Resolve(e)
+	return tv.Not(), err
+}
+
+func (o *NotExists) Visit(visitor ExpressionVisitorIntarface) {
+	visitor.NotExists(*o)
+}

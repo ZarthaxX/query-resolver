@@ -14,6 +14,9 @@ type OrderVisitor struct {
 	serviceAmountFrom, serviceAmountTo *int64
 }
 
+func (v *OrderVisitor) Sum(e operator.Sum) {
+}
+
 func (v *OrderVisitor) In(e operator.In) {
 }
 
@@ -58,11 +61,7 @@ func (v *OrderVisitor) LessThan(e operator.LessThan) {
 	}
 }
 
-func (v *OrderVisitor) Const(e operator.Const) {
-
-}
-
-func (v *OrderVisitor) Field(e operator.Field) {
+func (v *OrderVisitor) NotExists(e operator.NotExists) {
 
 }
 
@@ -79,7 +78,7 @@ func (s OrderDataSource) Retrieve(ctx context.Context, query engine.QueryExpress
 	e1 := engine.NewEntity(id1)
 	e1.AddField(OrderStatusName, NewOrderStatus("open"))
 	e1.AddField(OrderTypeName, NewOrderType("door"))
-	return []engine.FieldName{OrderStatusName, OrderTypeName},
+	return []engine.FieldName{OrderStatusName, OrderTypeName, OrderRandomName},
 		engine.Entities[OrderID]{id1: e1},
 		true
 }

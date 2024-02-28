@@ -8,7 +8,6 @@ import (
 type Value interface {
 	Resolve(e Entity) (value.Value, error)
 	IsResolvable(e Entity) bool // call this before Resolve to check if value can be resolvable and avoid errors
-	Visit(visitor ExpressionVisitorIntarface)
 	GetFieldNames() []value.FieldName
 	IsConst() bool
 	IsField(value.FieldName) bool
@@ -34,10 +33,6 @@ func (o Field) Resolve(e Entity) (res value.Value, err error) {
 
 func (o Field) IsResolvable(e Entity) bool {
 	return e.FieldExists(o.FieldName) != logic.Undefined
-}
-
-func (o Field) Visit(visitor ExpressionVisitorIntarface) {
-	visitor.Field(o)
 }
 
 func (o *Field) GetFieldNames() []value.FieldName {
@@ -66,10 +61,6 @@ func (o Const) Resolve(e Entity) (value.Value, error) {
 
 func (o Const) IsResolvable(e Entity) bool {
 	return true
-}
-
-func (o Const) Visit(visitor ExpressionVisitorIntarface) {
-	visitor.Const(o)
 }
 
 func (o *Const) GetFieldNames() []value.FieldName {

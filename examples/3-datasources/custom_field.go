@@ -30,6 +30,15 @@ func NewServiceAmount(v int64) ServiceAmount {
 	return value.NewPrimitiveArithmetic(v)
 }
 
+type OrderRandom = value.PrimitiveComparable[string]
+
+var OrderRandomName engine.FieldName = "order.random"
+var OrderRandomField = operator.NewField(OrderRandomName)
+
+func NewOrderRandom(v string) OrderRandom {
+	return value.NewPrimitiveComparable(v)
+}
+
 type OrderStatus = value.PrimitiveComparable[string]
 
 var OrderStatusName engine.FieldName = "order.status"

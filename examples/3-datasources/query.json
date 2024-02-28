@@ -2,7 +2,12 @@
     {
         "range": {
             "value": "@service.start",
-            "from": "$NOW"
+            "to": {
+                "sum": {
+                    "value_a": "$NOW",
+                    "value_b": 10000000000
+                }
+            }
         }
     },
     {
@@ -22,6 +27,16 @@
         "equal": {
             "value_a": "open",
             "value_b": "@order.status"
+        }
+    },
+    {
+        "exists": {
+            "field": "@order.status"
+        }
+    },
+    {
+        "not_exists": {
+            "field": "@order.random"
         }
     },
     {

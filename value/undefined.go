@@ -3,11 +3,13 @@ package value
 import "github.com/ZarthaxX/query-resolver/logic"
 
 type Value interface {
-	Sum(Value) (Value, error)
+	Plus(Value) (Value, error)
+	Minus(Value) (Value, error)
 	Equal(Value) (logic.TruthValue, error)
 	Less(Value) (logic.TruthValue, error)
 	Exists() bool
 	Value() any
+	//GetFieldNames()
 }
 
 type Undefined struct{}
@@ -16,7 +18,11 @@ func (v Undefined) Exists() bool {
 	return false
 }
 
-func (v Undefined) Sum(o Value) (Value, error) {
+func (v Undefined) Plus(o Value) (Value, error) {
+	return v, nil
+}
+
+func (v Undefined) Minus(o Value) (Value, error) {
 	return v, nil
 }
 

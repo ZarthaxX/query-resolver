@@ -45,7 +45,11 @@ func (v PrimitiveBasic[T]) Less(o Value) (logic.TruthValue, error) {
 	return logic.Undefined, errors.New("incomparable value")
 }
 
-func (v PrimitiveBasic[T]) Sum(o Value) (Value, error) {
+func (v PrimitiveBasic[T]) Plus(o Value) (Value, error) {
+	return Undefined{}, errors.New("incomparable value")
+}
+
+func (v PrimitiveBasic[T]) Minus(o Value) (Value, error) {
 	return Undefined{}, errors.New("incomparable value")
 }
 
@@ -84,7 +88,11 @@ func (v PrimitiveEqual[T]) Less(o Value) (logic.TruthValue, error) {
 	return logic.Undefined, errors.New("incomparable value")
 }
 
-func (v PrimitiveEqual[T]) Sum(o Value) (Value, error) {
+func (v PrimitiveEqual[T]) Plus(o Value) (Value, error) {
+	return Undefined{}, errors.New("incomparable value")
+}
+
+func (v PrimitiveEqual[T]) Minus(o Value) (Value, error) {
 	return Undefined{}, errors.New("incomparable value")
 }
 
@@ -132,7 +140,11 @@ func (v PrimitiveComparable[T]) Less(o Value) (logic.TruthValue, error) {
 	return logic.TruthValueFromBool(v.value < ov), nil
 }
 
-func (v PrimitiveComparable[T]) Sum(o Value) (Value, error) {
+func (v PrimitiveComparable[T]) Plus(o Value) (Value, error) {
+	return Undefined{}, errors.New("incomparable value")
+}
+
+func (v PrimitiveComparable[T]) Minus(o Value) (Value, error) {
 	return Undefined{}, errors.New("incomparable value")
 }
 
@@ -146,7 +158,7 @@ func NewPrimitiveArithmetic[T Number](v T) PrimitiveArithmetic[T] {
 	}
 }
 
-func (v PrimitiveArithmetic[T]) Sum(o Value) (Value, error) {
+func (v PrimitiveArithmetic[T]) Plus(o Value) (Value, error) {
 	ov, ok := o.Value().(T)
 	if !ok {
 		return nil, errors.New("invalid type")
@@ -159,30 +171,23 @@ func (v PrimitiveArithmetic[T]) Sum(o Value) (Value, error) {
 	return NewPrimitiveArithmetic(v.value + ov), nil
 }
 
-func (v PrimitiveArithmetic[T]) Equal(o Value) (logic.TruthValue, error) {
-	ov, ok := o.(PrimitiveArithmetic[T])
+func (v PrimitiveArithmetic[T]) Minus(o Value) (Value, error) {
+	ov, ok := o.Value().(T)
 	if !ok {
-		return logic.False, errors.New("invalid type")
-	}
-
-	if !v.Exists() || !o.Exists() {
-		return logic.Undefined, nil
-	}
-
-	return logic.TruthValueFromBool(v.value == ov.value), nil
-}
-
-func (v PrimitiveArithmetic[T]) Less(o Value) (logic.TruthValue, error) {
-	ov, ok := o.(PrimitiveArithmetic[T])
-	if !ok {
-		return logic.False, errors.New("invalid type")
+		return nil, errors.New("invalid type")
 	}
 
 	if !o.Exists() {
-		return logic.Undefined, nil
+		return Undefined{}, nil
 	}
 
-	return logic.TruthValueFromBool(v.value < ov.value), nil
+	return NewPrimitiveArithmetic(v.value - ov), nil
+}
+
+type Bool = PrimitiveEqual[bool]
+
+func NewBool(v bool) Bool {
+	return NewPrimitiveEqual[bool](v)
 }
 
 type Int64 = PrimitiveArithmetic[int64]

@@ -68,9 +68,6 @@ func (o *Equal) IsResolvable(e Entity) bool {
 
 func (o *Equal) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.Equal(*o)
-
-	o.A.Visit(visitor)
-	o.B.Visit(visitor)
 }
 
 func (o *Equal) IsConst() bool {
@@ -119,9 +116,6 @@ func (o *LessThan) IsResolvable(e Entity) bool {
 
 func (o *LessThan) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.LessThan(*o)
-
-	o.A.Visit(visitor)
-	o.B.Visit(visitor)
 }
 
 func (o *LessThan) IsConst() bool {
@@ -192,12 +186,6 @@ func (o *In) IsResolvable(e Entity) bool {
 
 func (o *In) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.In(*o)
-
-	o.A.Visit(visitor)
-
-	for _, elem := range o.List {
-		elem.Visit(visitor)
-	}
 }
 
 func (o *In) IsConst() bool {
