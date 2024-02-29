@@ -68,8 +68,11 @@ func (v *OrderVisitor) NotExists(e operator.NotExists) {
 type OrderDataSource struct {
 }
 
-func (s OrderDataSource) Retrieve(ctx context.Context, query engine.QueryExpression, entities engine.Entities[OrderID]) (
-	retrievableFields []engine.FieldName,
+func (s OrderDataSource) GetRetrievableFields() []engine.FieldName {
+	return []engine.FieldName{OrderStatusName, OrderTypeName, OrderRandomName}
+}
+
+func (s OrderDataSource) RetrieveFields(ctx context.Context, query engine.QueryExpression, entities engine.Entities[OrderID]) (
 	result engine.Entities[OrderID],
 	applies bool) {
 	visitor := OrderVisitor{}
@@ -78,16 +81,18 @@ func (s OrderDataSource) Retrieve(ctx context.Context, query engine.QueryExpress
 	e1 := engine.NewEntity(id1)
 	e1.AddField(OrderStatusName, NewOrderStatus("open"))
 	e1.AddField(OrderTypeName, NewOrderType("door"))
-	return []engine.FieldName{OrderStatusName, OrderTypeName, OrderRandomName},
-		engine.Entities[OrderID]{id1: e1},
+	return engine.Entities[OrderID]{id1: e1},
 		true
 }
 
 type ServiceDataSource struct {
 }
 
-func (s ServiceDataSource) Retrieve(ctx context.Context, query engine.QueryExpression, entities engine.Entities[OrderID]) (
-	retrievableFields []engine.FieldName,
+func (s ServiceDataSource) GetRetrievableFields() []engine.FieldName {
+	return []engine.FieldName{ServiceStartName, ServiceAmountName}
+}
+
+func (s ServiceDataSource) RetrieveFields(ctx context.Context, query engine.QueryExpression, entities engine.Entities[OrderID]) (
 	result engine.Entities[OrderID],
 	applies bool) {
 
@@ -95,23 +100,23 @@ func (s ServiceDataSource) Retrieve(ctx context.Context, query engine.QueryExpre
 	e1 := engine.NewEntity(id1)
 	e1.AddField(ServiceAmountName, NewServiceAmount(10))
 	e1.AddField(ServiceStartName, NewServiceStart(time.Now().Add(-time.Minute).Unix()))
-	return []engine.FieldName{ServiceStartName, ServiceAmountName},
-		engine.Entities[OrderID]{id1: e1},
-		true
+	return engine.Entities[OrderID]{id1: e1}, true
 }
 
 type DriverDataSource struct {
 }
 
-func (s *DriverDataSource) Retrieve(ctx context.Context, query engine.QueryExpression, entities engine.Entities[OrderID]) (
-	retrievableFields []engine.FieldName,
+func (s *DriverDataSource) GetRetrievableFields() []engine.FieldName {
+	return []engine.FieldName{DriverNameName}
+}
+
+func (s *DriverDataSource) RetrieveFields(ctx context.Context, query engine.QueryExpression, entities engine.Entities[OrderID]) (
 	result engine.Entities[OrderID],
 	applies bool) {
 
 	id1 := OrderID("order_1")
 	e1 := engine.NewEntity(id1)
 	e1.AddField(DriverNameName, NewDriverName("Alan"))
-	return []engine.FieldName{DriverNameName},
-		engine.Entities[OrderID]{id1: e1},
+	return engine.Entities[OrderID]{id1: e1},
 		true
 }

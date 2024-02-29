@@ -22,7 +22,8 @@ func (e QueryExpressionPartiallySolvableError) Error() string {
 }
 
 type DataSource[T comparable] interface {
-	Retrieve(ctx context.Context, query QueryExpression, entities Entities[T]) ([]FieldName, Entities[T], bool)
+	RetrieveFields(ctx context.Context, query QueryExpression, entities Entities[T]) (Entities[T], bool)
+	GetRetrievableFields() []FieldName
 }
 
 type ExpressionResolver[T comparable] struct {
@@ -49,7 +50,7 @@ func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExp
 func (e *ExpressionResolver[T]) resolveQuery(ctx context.Context, query QueryExpression, entities Entities[T]) (Entities[T], error) {
 	var retrieved bool
 	for _, src := range e.sources {
-		_, entities, retrieved = src.Retrieve(ctx, query, entities)
+		entities, retrieved = src.RetrieveFields(ctx, query, entities)
 		if retrieved {
 			break
 		}
@@ -103,7 +104,8 @@ func (e *ExpressionResolver[T]) retrieveEntities(ctx context.Context, query Quer
 	// entitiesChanged tells us if a new field was added to ANY entity
 	// if not, we can safely assume we cannot move from this state, so the expression will be unsolvable
 	var entitiesChanged bool
-	retrievableFields, retrievedEntities, ok := source.Retrieve(ctx, query, entities)
+	retrievableFields := source.GetRetrievableFields()
+	retrievedEntities, ok := source.RetrieveFields(ctx, query, entities)
 	if !ok {
 		return entities, false, nil
 	}
