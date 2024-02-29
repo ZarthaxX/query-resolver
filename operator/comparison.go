@@ -34,13 +34,13 @@ type Comparison interface {
 Equal takes 2 values and returns if their values match
 */
 type Equal struct {
-	A, B Value
+	TermA, TermB Value
 }
 
 func NewEqual(a, b Value) *Equal {
 	return &Equal{
-		A: a,
-		B: b,
+		TermA: a,
+		TermB: b,
 	}
 }
 
@@ -49,12 +49,12 @@ func (o *Equal) Resolve(e Entity) (logic.TruthValue, error) {
 		return logic.Undefined, errUnresolvableExpression
 	}
 
-	va, err := o.A.Resolve(e)
+	va, err := o.TermA.Resolve(e)
 	if err != nil {
 		return logic.False, err
 	}
 
-	vb, err := o.B.Resolve(e)
+	vb, err := o.TermB.Resolve(e)
 	if err != nil {
 		return logic.False, err
 	}
@@ -63,7 +63,7 @@ func (o *Equal) Resolve(e Entity) (logic.TruthValue, error) {
 }
 
 func (o *Equal) IsResolvable(e Entity) bool {
-	return o.A.IsResolvable(e) && o.B.IsResolvable(e)
+	return o.TermA.IsResolvable(e) && o.TermB.IsResolvable(e)
 }
 
 func (o *Equal) Visit(visitor ExpressionVisitorIntarface) {
@@ -71,24 +71,24 @@ func (o *Equal) Visit(visitor ExpressionVisitorIntarface) {
 }
 
 func (o *Equal) IsConst() bool {
-	return o.A.IsConst() && o.B.IsConst()
+	return o.TermA.IsConst() && o.TermB.IsConst()
 }
 
 func (o *Equal) GetFieldNames() []value.FieldName {
-	return append(o.A.GetFieldNames(), o.B.GetFieldNames()...)
+	return append(o.TermA.GetFieldNames(), o.TermB.GetFieldNames()...)
 }
 
 /*
 LessThan takes 2 values and returns if a is less than b
 */
 type LessThan struct {
-	A, B Value
+	TermA, TermB Value
 }
 
 func NewLessThan(a, b Value) *LessThan {
 	return &LessThan{
-		A: a,
-		B: b,
+		TermA: a,
+		TermB: b,
 	}
 }
 
@@ -97,12 +97,12 @@ func (o *LessThan) Resolve(e Entity) (logic.TruthValue, error) {
 		return logic.Undefined, errUnresolvableExpression
 	}
 
-	va, err := o.A.Resolve(e)
+	va, err := o.TermA.Resolve(e)
 	if err != nil {
 		return logic.False, err
 	}
 
-	vb, err := o.B.Resolve(e)
+	vb, err := o.TermB.Resolve(e)
 	if err != nil {
 		return logic.False, err
 	}
@@ -111,7 +111,7 @@ func (o *LessThan) Resolve(e Entity) (logic.TruthValue, error) {
 }
 
 func (o *LessThan) IsResolvable(e Entity) bool {
-	return o.A.IsResolvable(e) && o.B.IsResolvable(e)
+	return o.TermA.IsResolvable(e) && o.TermB.IsResolvable(e)
 }
 
 func (o *LessThan) Visit(visitor ExpressionVisitorIntarface) {
@@ -119,36 +119,36 @@ func (o *LessThan) Visit(visitor ExpressionVisitorIntarface) {
 }
 
 func (o *LessThan) IsConst() bool {
-	return o.A.IsConst() && o.B.IsConst()
+	return o.TermA.IsConst() && o.TermB.IsConst()
 }
 
 func (o *LessThan) GetFieldNames() []value.FieldName {
-	return append(o.A.GetFieldNames(), o.B.GetFieldNames()...)
+	return append(o.TermA.GetFieldNames(), o.TermB.GetFieldNames()...)
 }
 
 /*
 In takes 2 values and returns if their values match
 */
 type In struct {
-	A    Value
-	List []Value
+	Term  Value
+	Terms []Value
 }
 
 func NewIn(a Value, list []Value) *In {
 	return &In{
-		A:    a,
-		List: list,
+		Term:  a,
+		Terms: list,
 	}
 }
 
 func (o *In) Resolve(e Entity) (logic.TruthValue, error) {
-	va, err := o.A.Resolve(e)
+	va, err := o.Term.Resolve(e)
 	if err != nil {
 		return logic.False, err
 	}
 
 	var unresolvableValueExists bool
-	for _, elem := range o.List {
+	for _, elem := range o.Terms {
 		if elem.IsResolvable(e) {
 			v, err := elem.Resolve(e)
 			if err != nil {
@@ -189,22 +189,20 @@ func (o *In) Visit(visitor ExpressionVisitorIntarface) {
 }
 
 func (o *In) IsConst() bool {
-	for _, e := range o.List {
+	for _, e := range o.Terms {
 		if !e.IsConst() {
 			return false
 		}
 	}
 
-	return o.A.IsConst()
+	return o.Term.IsConst()
 }
 
 func (o *In) GetFieldNames() []value.FieldName {
-	fieldNames := o.A.GetFieldNames()
-	for _, e := range o.List {
+	fieldNames := o.Term.GetFieldNames()
+	for _, e := range o.Terms {
 		fieldNames = append(fieldNames, e.GetFieldNames()...)
 	}
 
 	return fieldNames
 }
-
-// TODO: ContainsExpression and NotExists
