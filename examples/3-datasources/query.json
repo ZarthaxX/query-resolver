@@ -1,32 +1,32 @@
 [
     {
         "range": {
-            "value": "@service.start",
+            "term": "@service.start",
             "to": {
                 "sum": {
-                    "value_a": "$NOW",
-                    "value_b": 10000000000
+                    "term_a": "$NOW",
+                    "term_b": 10000000000
                 }
             }
         }
     },
     {
         "range": {
-            "value": "@service.amount",
+            "term": "@service.amount",
             "from": 1,
             "to": 52
         }
     },
     {
         "equal": {
-            "value_a": 10,
-            "value_b": "@service.amount"
+            "term_a": 10,
+            "term_b": "@service.amount"
         }
     },
     {
         "equal": {
-            "value_a": "open",
-            "value_b": "@order.status"
+            "term_a": "open",
+            "term_b": "@order.status"
         }
     },
     {
@@ -41,8 +41,8 @@
     },
     {
         "in": {
-            "value": "@order.type",
-            "values": [
+            "term": "@order.type",
+            "terms": [
                 "door",
                 "pickup"
             ]

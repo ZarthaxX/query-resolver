@@ -111,7 +111,7 @@ func (q *rangeOperator) UnmarshalJSON(b []byte) error {
 
 	var v valueExpression
 	var from, to *valueExpression
-	if err := json.Unmarshal(*fields["value"], &v); err != nil {
+	if err := json.Unmarshal(*fields["term"], &v); err != nil {
 		return err
 	}
 	if fromB, ok := fields["from"]; ok {
@@ -191,10 +191,10 @@ func (q *equalOperator) UnmarshalJSON(b []byte) error {
 	}
 
 	var va, vb valueExpression
-	if err := json.Unmarshal(*fields["value_a"], &va); err != nil {
+	if err := json.Unmarshal(*fields["term_a"], &va); err != nil {
 		return err
 	}
-	if err := json.Unmarshal(*fields["value_b"], &vb); err != nil {
+	if err := json.Unmarshal(*fields["term_b"], &vb); err != nil {
 		return err
 	}
 
@@ -214,10 +214,10 @@ func (q *sumOperator) UnmarshalJSON(b []byte) error {
 	}
 
 	var va, vb valueExpression
-	if err := json.Unmarshal(*fields["value_a"], &va); err != nil {
+	if err := json.Unmarshal(*fields["term_a"], &va); err != nil {
 		return err
 	}
-	if err := json.Unmarshal(*fields["value_b"], &vb); err != nil {
+	if err := json.Unmarshal(*fields["term_b"], &vb); err != nil {
 		return err
 	}
 
@@ -237,13 +237,13 @@ func (q *inOperator) UnmarshalJSON(b []byte) error {
 	}
 
 	var v valueExpression
-	if err := json.Unmarshal(*fields["value"], &v); err != nil {
+	if err := json.Unmarshal(*fields["term"], &v); err != nil {
 		return err
 	}
 
 	var list []*json.RawMessage
 	values := []operator.Value{}
-	if err := json.Unmarshal(*fields["values"], &list); err != nil {
+	if err := json.Unmarshal(*fields["terms"], &list); err != nil {
 		return err
 	}
 
