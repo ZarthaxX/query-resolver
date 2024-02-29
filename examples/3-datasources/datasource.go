@@ -24,19 +24,19 @@ func (v *OrderVisitor) Exists(e operator.Exists) {
 }
 
 func (v *OrderVisitor) Equal(e operator.Equal) {
-	if !(e.A.IsField(ServiceAmountName) || e.B.IsField(ServiceAmountName)) {
+	if !(e.TermA.IsField(ServiceAmountName) || e.TermB.IsField(ServiceAmountName)) {
 		return
 	}
 
-	if e.A.IsResolvable(EmptyEntity) {
-		ra, _ := e.A.Resolve(EmptyEntity)
+	if e.TermA.IsResolvable(EmptyEntity) {
+		ra, _ := e.TermA.Resolve(EmptyEntity)
 		va, _ := ra.Value().(int64)
 		v.serviceAmountFrom = &va
 		v.serviceAmountTo = &va
 	}
 
-	if e.B.IsResolvable(EmptyEntity) {
-		rb, _ := e.B.Resolve(EmptyEntity)
+	if e.TermB.IsResolvable(EmptyEntity) {
+		rb, _ := e.TermB.Resolve(EmptyEntity)
 		vb, _ := rb.Value().(int64)
 		v.serviceAmountFrom = &vb
 		v.serviceAmountTo = &vb
@@ -44,18 +44,18 @@ func (v *OrderVisitor) Equal(e operator.Equal) {
 }
 
 func (v *OrderVisitor) LessThan(e operator.LessThan) {
-	if !(e.A.IsField(ServiceAmountName) || e.B.IsField(ServiceAmountName)) {
+	if !(e.TermA.IsField(ServiceAmountName) || e.TermB.IsField(ServiceAmountName)) {
 		return
 	}
 
-	if e.A.IsConst() {
-		ra, _ := e.A.Resolve(EmptyEntity)
+	if e.TermA.IsConst() {
+		ra, _ := e.TermA.Resolve(EmptyEntity)
 		va, _ := ra.Value().(int64)
 		v.serviceAmountFrom = &va
 	}
 
-	if e.B.IsConst() {
-		rb, _ := e.B.Resolve(EmptyEntity)
+	if e.TermB.IsConst() {
+		rb, _ := e.TermB.Resolve(EmptyEntity)
 		vb, _ := rb.Value().(int64)
 		v.serviceAmountTo = &vb
 	}

@@ -6,13 +6,13 @@ import "github.com/ZarthaxX/query-resolver/value"
 Sum takes 2 values and returns their sum
 */
 type Sum struct {
-	A, B Value
+	TermA, TermB Value
 }
 
 func NewSum(a, b Value) *Sum {
 	return &Sum{
-		A: a,
-		B: b,
+		TermA: a,
+		TermB: b,
 	}
 }
 
@@ -21,12 +21,12 @@ func (o *Sum) Resolve(e Entity) (value.Value, error) {
 		return nil, errUnresolvableExpression
 	}
 
-	va, err := o.A.Resolve(e)
+	va, err := o.TermA.Resolve(e)
 	if err != nil {
 		return nil, err
 	}
 
-	vb, err := o.B.Resolve(e)
+	vb, err := o.TermB.Resolve(e)
 	if err != nil {
 		return nil, err
 	}
@@ -35,11 +35,11 @@ func (o *Sum) Resolve(e Entity) (value.Value, error) {
 }
 
 func (o *Sum) IsResolvable(e Entity) bool {
-	return o.A.IsResolvable(e) && o.B.IsResolvable(e)
+	return o.TermA.IsResolvable(e) && o.TermB.IsResolvable(e)
 }
 
 func (o *Sum) IsConst() bool {
-	return o.A.IsConst() && o.B.IsConst()
+	return o.TermA.IsConst() && o.TermB.IsConst()
 }
 
 func (o *Sum) IsField(_ value.FieldName) bool {
@@ -47,20 +47,20 @@ func (o *Sum) IsField(_ value.FieldName) bool {
 }
 
 func (o *Sum) GetFieldNames() []value.FieldName {
-	return append(o.A.GetFieldNames(), o.B.GetFieldNames()...)
+	return append(o.TermA.GetFieldNames(), o.TermB.GetFieldNames()...)
 }
 
 /*
 Substract takes 2 values and returns their substraction
 */
 type Substract struct {
-	A, B Value
+	TermA, TermB Value
 }
 
 func NewSubstract(a, b Value) *Substract {
 	return &Substract{
-		A: a,
-		B: b,
+		TermA: a,
+		TermB: b,
 	}
 }
 
@@ -69,12 +69,12 @@ func (o *Substract) Resolve(e Entity) (value.Value, error) {
 		return nil, errUnresolvableExpression
 	}
 
-	va, err := o.A.Resolve(e)
+	va, err := o.TermA.Resolve(e)
 	if err != nil {
 		return nil, err
 	}
 
-	vb, err := o.B.Resolve(e)
+	vb, err := o.TermB.Resolve(e)
 	if err != nil {
 		return nil, err
 	}
@@ -83,11 +83,11 @@ func (o *Substract) Resolve(e Entity) (value.Value, error) {
 }
 
 func (o *Substract) IsResolvable(e Entity) bool {
-	return o.A.IsResolvable(e) && o.B.IsResolvable(e)
+	return o.TermA.IsResolvable(e) && o.TermB.IsResolvable(e)
 }
 
 func (o *Substract) IsConst() bool {
-	return o.A.IsConst() && o.B.IsConst()
+	return o.TermA.IsConst() && o.TermB.IsConst()
 }
 
 func (o *Substract) IsField(_ value.FieldName) bool {
@@ -95,5 +95,5 @@ func (o *Substract) IsField(_ value.FieldName) bool {
 }
 
 func (o *Substract) GetFieldNames() []value.FieldName {
-	return append(o.A.GetFieldNames(), o.B.GetFieldNames()...)
+	return append(o.TermA.GetFieldNames(), o.TermB.GetFieldNames()...)
 }
