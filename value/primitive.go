@@ -12,11 +12,11 @@ type Number interface {
 }
 
 type Comparable interface {
-	Number | string
+	Number | ~string
 }
 
 type Equal interface {
-	Comparable | bool
+	Comparable | ~bool
 }
 
 type PrimitiveBasic[T any] struct {
