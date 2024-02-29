@@ -74,7 +74,8 @@ func (s OrderDataSource) GetRetrievableFields() []engine.FieldName {
 
 func (s OrderDataSource) RetrieveFields(ctx context.Context, query engine.QueryExpression, entities engine.Entities[OrderID]) (
 	result engine.Entities[OrderID],
-	applies bool) {
+	applies bool,
+	err error) {
 	visitor := OrderVisitor{}
 	query.Visit(&visitor)
 	id1 := OrderID("order_1")
@@ -82,7 +83,8 @@ func (s OrderDataSource) RetrieveFields(ctx context.Context, query engine.QueryE
 	e1.AddField(OrderStatusName, NewOrderStatus("open"))
 	e1.AddField(OrderTypeName, NewOrderType("door"))
 	return engine.Entities[OrderID]{id1: e1},
-		true
+		true,
+		nil
 }
 
 type ServiceDataSource struct {
@@ -94,13 +96,14 @@ func (s ServiceDataSource) GetRetrievableFields() []engine.FieldName {
 
 func (s ServiceDataSource) RetrieveFields(ctx context.Context, query engine.QueryExpression, entities engine.Entities[OrderID]) (
 	result engine.Entities[OrderID],
-	applies bool) {
+	applies bool,
+	err error) {
 
 	id1 := OrderID("order_1")
 	e1 := engine.NewEntity(id1)
 	e1.AddField(ServiceAmountName, NewServiceAmount(10))
 	e1.AddField(ServiceStartName, NewServiceStart(time.Now().Add(-time.Minute).Unix()))
-	return engine.Entities[OrderID]{id1: e1}, true
+	return engine.Entities[OrderID]{id1: e1}, true, nil
 }
 
 type DriverDataSource struct {
@@ -112,11 +115,12 @@ func (s *DriverDataSource) GetRetrievableFields() []engine.FieldName {
 
 func (s *DriverDataSource) RetrieveFields(ctx context.Context, query engine.QueryExpression, entities engine.Entities[OrderID]) (
 	result engine.Entities[OrderID],
-	applies bool) {
+	applies bool,
+	err error) {
 
 	id1 := OrderID("order_1")
 	e1 := engine.NewEntity(id1)
 	e1.AddField(DriverNameName, NewDriverName("Alan"))
 	return engine.Entities[OrderID]{id1: e1},
-		true
+		true, nil
 }

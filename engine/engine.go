@@ -22,7 +22,7 @@ func (e QueryExpressionPartiallySolvableError) Error() string {
 }
 
 type DataSource[T comparable] interface {
-	RetrieveFields(ctx context.Context, query QueryExpression, entities Entities[T]) (Entities[T], bool)
+	RetrieveFields(ctx context.Context, query QueryExpression, entities Entities[T]) (Entities[T], bool, error)
 	GetRetrievableFields() []FieldName
 }
 
@@ -50,7 +50,12 @@ func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExp
 func (e *ExpressionResolver[T]) resolveQuery(ctx context.Context, query QueryExpression, entities Entities[T]) (Entities[T], error) {
 	var retrieved bool
 	for _, src := range e.sources {
-		entities, retrieved = src.RetrieveFields(ctx, query, entities)
+		var err error
+		entities, retrieved, err = src.RetrieveFields(ctx, query, entities)
+		if err != nil {
+			return nil, err
+		}
+
 		if retrieved {
 			break
 		}
@@ -105,7 +110,10 @@ func (e *ExpressionResolver[T]) retrieveEntities(ctx context.Context, query Quer
 	// if not, we can safely assume we cannot move from this state, so the expression will be unsolvable
 	var entitiesChanged bool
 	retrievableFields := source.GetRetrievableFields()
-	retrievedEntities, ok := source.RetrieveFields(ctx, query, entities)
+	retrievedEntities, ok, err := source.RetrieveFields(ctx, query, entities)
+	if err != nil {
+		return nil, false, err
+	}
 	if !ok {
 		return entities, false, nil
 	}
@@ -143,6 +151,11 @@ func (e *ExpressionResolver[T]) retrieveEntities(ctx context.Context, query Quer
 }
 
 func (e *ExpressionResolver[T]) applyQuery(query QueryExpression, entities Entities[T]) (QueryExpression, Entities[T], error) {
+	// no entities, query is solved
+	if len(entities) == 0 {
+		return nil, nil, nil
+	}
+
 	newQuery := QueryExpression{}
 	for _, operator := range query {
 		entity := maps.Values(entities)[0]
