@@ -10,36 +10,130 @@ import (
 	"github.com/ZarthaxX/query-resolver/value"
 )
 
-func QueryFromJSON(rawQuery []byte) ([]operator.Comparison, error) {
+func QueryFromJSON(rawQuery []byte) (operator.Comparison, error) {
 	var queryExpression queryExpression
-	return queryExpression.operators, json.Unmarshal(rawQuery, &queryExpression)
+	return queryExpression.operator, json.Unmarshal(rawQuery, &queryExpression)
 }
 
 type queryExpression struct {
-	operators []operator.Comparison
+	operator operator.Comparison
 }
 
 func (q *queryExpression) UnmarshalJSON(b []byte) error {
-	var operators []*json.RawMessage
-	if err := json.Unmarshal(b, &operators); err != nil {
+	var op compoundOperator
+	if err := json.Unmarshal(b, &op); err != nil {
 		return err
 	}
 
-	q.operators = []operator.Comparison{}
-	for _, operator := range operators {
-		var op comparisonOperator
-		if err := json.Unmarshal(*operator, &op); err != nil {
+	q.operator = op.operator
+	return nil
+}
+
+type compoundOperator struct {
+	operator operator.Comparison
+}
+
+func (q *compoundOperator) UnmarshalJSON(b []byte) error {
+	var fields map[string]*json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
+		return err
+	}
+
+	if rm, ok := fields["and"]; ok {
+		var andOp andOperator
+		if err := json.Unmarshal(*rm, &andOp); err != nil {
 			return err
 		}
+		q.operator = andOp.operator
+		return nil
+	}
 
-		q.operators = append(q.operators, op.operators...)
+	if rm, ok := fields["or"]; ok {
+		var orOp orOperator
+		if err := json.Unmarshal(*rm, &orOp); err != nil {
+			return err
+		}
+		q.operator = orOp.operator
+		return nil
+	}
+
+	if rm, ok := fields["not"]; ok {
+		var notOp notOperator
+		if err := json.Unmarshal(*rm, &notOp); err != nil {
+			return err
+		}
+		q.operator = notOp.operator
+		return nil
 	}
 
 	return nil
 }
 
+type andOperator struct {
+	operator operator.Comparison
+}
+
+func (q *andOperator) UnmarshalJSON(b []byte) error {
+	var fields []*json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
+		return err
+	}
+
+	terms := []operator.Comparison{}
+	for _, f := range fields {
+		var op comparisonOperator
+		if err := op.UnmarshalJSON([]byte(*f)); err != nil {
+			return err
+		}
+
+		terms = append(terms, op.operator)
+	}
+
+	q.operator = operator.NewAnd(terms...)
+
+	return nil
+}
+
+type orOperator struct {
+	operator operator.Comparison
+}
+
+func (q *orOperator) UnmarshalJSON(b []byte) error {
+	var fields []*json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
+		return err
+	}
+
+	terms := []operator.Comparison{}
+	for _, f := range fields {
+		var op comparisonOperator
+		if err := op.UnmarshalJSON([]byte(*f)); err != nil {
+			return err
+		}
+
+		terms = append(terms, op.operator)
+	}
+
+	q.operator = operator.NewOr(terms...)
+
+	return nil
+}
+
+type notOperator struct {
+	operator operator.Comparison
+}
+
+func (q *notOperator) UnmarshalJSON(b []byte) error {
+	var op comparisonOperator
+	if err := json.Unmarshal(b, &op); err != nil {
+		return err
+	}
+	q.operator = operator.NewNot(op.operator)
+	return nil
+}
+
 type comparisonOperator struct {
-	operators []operator.Comparison
+	operator operator.Comparison
 }
 
 func (q *comparisonOperator) UnmarshalJSON(b []byte) error {
@@ -53,7 +147,7 @@ func (q *comparisonOperator) UnmarshalJSON(b []byte) error {
 		if err := json.Unmarshal(*rm, &rangeOp); err != nil {
 			return err
 		}
-		q.operators = rangeOp.operators
+		q.operator = rangeOp.operator
 		return nil
 	}
 
@@ -62,7 +156,7 @@ func (q *comparisonOperator) UnmarshalJSON(b []byte) error {
 		if err := json.Unmarshal(*rm, &equalOp); err != nil {
 			return err
 		}
-		q.operators = append(q.operators, equalOp.operator)
+		q.operator = equalOp.operator
 		return nil
 	}
 
@@ -71,7 +165,7 @@ func (q *comparisonOperator) UnmarshalJSON(b []byte) error {
 		if err := json.Unmarshal(*rm, &existsOp); err != nil {
 			return err
 		}
-		q.operators = append(q.operators, existsOp.operator)
+		q.operator = existsOp.operator
 		return nil
 	}
 
@@ -80,7 +174,7 @@ func (q *comparisonOperator) UnmarshalJSON(b []byte) error {
 		if err := json.Unmarshal(*rm, &notExistsOp); err != nil {
 			return err
 		}
-		q.operators = append(q.operators, notExistsOp.operator)
+		q.operator = notExistsOp.operator
 		return nil
 	}
 
@@ -90,25 +184,31 @@ func (q *comparisonOperator) UnmarshalJSON(b []byte) error {
 			return err
 		}
 
-		q.operators = append(q.operators, inOp.operator)
+		q.operator = inOp.operator
 		return nil
 	}
+
+	var cop compoundOperator
+	if err := json.Unmarshal(b, &cop); err != nil {
+		return err
+	}
+
+	q.operator = cop.operator
 
 	return nil
 }
 
 type rangeOperator struct {
-	operators []operator.Comparison
+	operator operator.Comparison
 }
 
 func (q *rangeOperator) UnmarshalJSON(b []byte) error {
-	q.operators = []operator.Comparison{}
-
 	var fields map[string]*json.RawMessage
 	if err := json.Unmarshal(b, &fields); err != nil {
 		return err
 	}
 
+	operators := []operator.Comparison{}
 	var v valueExpression
 	var from, to *valueExpression
 	if err := json.Unmarshal(*fields["term"], &v); err != nil {
@@ -118,14 +218,16 @@ func (q *rangeOperator) UnmarshalJSON(b []byte) error {
 		if err := json.Unmarshal(*fromB, &from); err != nil {
 			return err
 		}
-		q.operators = append(q.operators, operator.NewLessThan(from.value, v.value))
+		operators = append(operators, operator.NewLess(from.value, v.value))
 	}
 	if toB, ok := fields["to"]; ok {
 		if err := json.Unmarshal(*toB, &to); err != nil {
 			return err
 		}
-		q.operators = append(q.operators, operator.NewLessThan(v.value, to.value))
+		operators = append(operators, operator.NewLess(v.value, to.value))
 	}
+
+	q.operator = operator.NewAnd(operators...)
 
 	return nil
 }
@@ -199,29 +301,6 @@ func (q *equalOperator) UnmarshalJSON(b []byte) error {
 	}
 
 	q.operator = operator.NewEqual(va.value, vb.value)
-
-	return nil
-}
-
-type sumOperator struct {
-	operator operator.Value
-}
-
-func (q *sumOperator) UnmarshalJSON(b []byte) error {
-	var fields map[string]*json.RawMessage
-	if err := json.Unmarshal(b, &fields); err != nil {
-		return err
-	}
-
-	var va, vb valueExpression
-	if err := json.Unmarshal(*fields["term_a"], &va); err != nil {
-		return err
-	}
-	if err := json.Unmarshal(*fields["term_b"], &vb); err != nil {
-		return err
-	}
-
-	q.operator = operator.NewSum(va.value, vb.value)
 
 	return nil
 }
@@ -324,6 +403,29 @@ func (q *arithmeticOperator) UnmarshalJSON(b []byte) error {
 		q.value = sumOp.operator
 		return nil
 	}
+
+	return nil
+}
+
+type sumOperator struct {
+	operator operator.Value
+}
+
+func (q *sumOperator) UnmarshalJSON(b []byte) error {
+	var fields map[string]*json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
+		return err
+	}
+
+	var va, vb valueExpression
+	if err := json.Unmarshal(*fields["term_a"], &va); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(*fields["term_b"], &vb); err != nil {
+		return err
+	}
+
+	q.operator = operator.NewSum(va.value, vb.value)
 
 	return nil
 }

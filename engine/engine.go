@@ -8,6 +8,7 @@ import (
 	"github.com/ZarthaxX/query-resolver/logic"
 	"github.com/ZarthaxX/query-resolver/operator"
 	"github.com/ZarthaxX/query-resolver/value"
+
 	"golang.org/x/exp/maps"
 )
 
@@ -48,21 +49,23 @@ func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExp
 }
 
 func (e *ExpressionResolver[T]) resolveQuery(ctx context.Context, query QueryExpression, entities Entities[T]) (Entities[T], error) {
-	var retrieved bool
-	for _, src := range e.sources {
-		var err error
-		entities, retrieved, err = src.RetrieveFields(ctx, query, entities)
-		if err != nil {
-			return nil, err
+	if len(entities) == 0 {
+		var retrieved bool
+		for _, src := range e.sources {
+			var err error
+			entities, retrieved, err = src.RetrieveFields(ctx, query, entities)
+			if err != nil {
+				return nil, err
+			}
+
+			if retrieved {
+				break
+			}
 		}
 
-		if retrieved {
-			break
+		if !retrieved {
+			return nil, ErrQueryExpressionUnsolvable
 		}
-	}
-
-	if !retrieved {
-		return nil, ErrQueryExpressionUnsolvable
 	}
 
 	var err error
@@ -71,11 +74,11 @@ func (e *ExpressionResolver[T]) resolveQuery(ctx context.Context, query QueryExp
 		return nil, err
 	}
 
-	for len(query) > 0 {
+	for len(query) > 0 && len(entities) > 0 {
 		var entitiesChanged bool
-		for _, source := range e.sources {
+		for i := 0; i < len(e.sources) && len(entities) > 0; i++ {
 			var sourceChangedEntities bool
-			entities, sourceChangedEntities, err = e.retrieveEntities(ctx, query, entities, source)
+			entities, sourceChangedEntities, err = e.retrieveEntities(ctx, query, entities, e.sources[i])
 			if err != nil {
 				return nil, err
 			}
@@ -122,7 +125,7 @@ func (e *ExpressionResolver[T]) retrieveEntities(ctx context.Context, query Quer
 		de, ok := retrievedEntities[id]
 		// if this entity was not found, initialize it empty
 		if !ok {
-			de = NewEntity[T](id)
+			de = NewEntity(id)
 		}
 
 		// for each possible field, we check if it came in the decorated entity
@@ -196,6 +199,10 @@ func (e *ExpressionResolver[T]) buildResultSchema(ctx context.Context, entities 
 	bool,
 	error,
 ) {
+	if len(entities) == 0 {
+		return nil, true, nil
+	}
+
 	query := QueryExpression{}
 	for _, f := range resultSchema {
 		query = append(query, operator.NewExists(f))

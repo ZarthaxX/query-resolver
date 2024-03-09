@@ -43,7 +43,7 @@ func (v *OrderVisitor) Equal(e operator.Equal) {
 	}
 }
 
-func (v *OrderVisitor) LessThan(e operator.LessThan) {
+func (v *OrderVisitor) Less(e operator.Less) {
 	if !(e.TermA.IsField(ServiceAmountName) || e.TermB.IsField(ServiceAmountName)) {
 		return
 	}
@@ -62,6 +62,18 @@ func (v *OrderVisitor) LessThan(e operator.LessThan) {
 }
 
 func (v *OrderVisitor) NotExists(e operator.NotExists) {
+
+}
+
+func (v *OrderVisitor) NotEqual(e operator.NotEqual) {
+
+}
+
+func (v *OrderVisitor) NotIn(e operator.NotIn) {
+
+}
+
+func (v *OrderVisitor) GreaterEqual(e operator.GreaterEqual) {
 
 }
 

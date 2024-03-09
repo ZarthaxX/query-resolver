@@ -26,3 +26,33 @@ func (v TruthValue) Not() TruthValue {
 
 	return Undefined
 }
+
+func (v TruthValue) And(o TruthValue) TruthValue {
+	switch v {
+	case True:
+		return o
+	case False:
+		return False
+	}
+
+	if o == False {
+		return False
+	}
+
+	return Undefined
+}
+
+func (v TruthValue) Or(o TruthValue) TruthValue {
+	switch v {
+	case True:
+		return True
+	case False:
+		return o
+	}
+
+	if o == True {
+		return True
+	}
+
+	return Undefined
+}

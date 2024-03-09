@@ -1,6 +1,10 @@
 package operator
 
-import "github.com/ZarthaxX/query-resolver/value"
+import (
+	"fmt"
+
+	"github.com/ZarthaxX/query-resolver/value"
+)
 
 /*
 Sum takes 2 values and returns their sum
@@ -50,6 +54,10 @@ func (o *Sum) GetFieldNames() []value.FieldName {
 	return append(o.TermA.GetFieldNames(), o.TermB.GetFieldNames()...)
 }
 
+func (o *Sum) String() string {
+	return fmt.Sprintf("%s + %s", o.TermA.String(), o.TermB.String())
+}
+
 /*
 Substract takes 2 values and returns their substraction
 */
@@ -96,4 +104,8 @@ func (o *Substract) IsField(_ value.FieldName) bool {
 
 func (o *Substract) GetFieldNames() []value.FieldName {
 	return append(o.TermA.GetFieldNames(), o.TermB.GetFieldNames()...)
+}
+
+func (o *Substract) String() string {
+	return fmt.Sprintf("%s - %s", o.TermA.String(), o.TermB.String())
 }

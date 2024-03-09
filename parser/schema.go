@@ -6,6 +6,7 @@ import (
 	"github.com/ZarthaxX/query-resolver/logic"
 	"github.com/ZarthaxX/query-resolver/operator"
 	"github.com/ZarthaxX/query-resolver/value"
+
 	"golang.org/x/exp/maps"
 )
 

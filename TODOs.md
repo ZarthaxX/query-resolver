@@ -1,0 +1,2 @@
+- Change resolve and isResolvable by reduce
+  - The idea is to keep reducing an expression until it is solvable based on the fields found. This will be individual for each entity, as each one has it's own values and can maintain a different query structure at each time.
