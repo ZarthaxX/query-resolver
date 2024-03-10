@@ -1,6 +1,8 @@
 package operator
 
 import (
+	"fmt"
+
 	"github.com/ZarthaxX/query-resolver/logic"
 	"github.com/ZarthaxX/query-resolver/value"
 )
@@ -11,6 +13,7 @@ type Value interface {
 	GetFieldNames() []value.FieldName
 	IsConst() bool
 	IsField(value.FieldName) bool
+	String() string
 }
 
 type Field struct {
@@ -47,6 +50,10 @@ func (o *Field) IsField(f value.FieldName) bool {
 	return o.FieldName == f
 }
 
+func (o *Field) String() string {
+	return o.FieldName
+}
+
 type Const struct {
 	value value.Value
 }
@@ -73,4 +80,8 @@ func (o *Const) IsConst() bool {
 
 func (o *Const) IsField(_ value.FieldName) bool {
 	return false
+}
+
+func (o *Const) String() string {
+	return fmt.Sprintf("%+v", o.value.Value())
 }

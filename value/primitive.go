@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/ZarthaxX/query-resolver/logic"
+
 	"golang.org/x/exp/constraints"
 )
 

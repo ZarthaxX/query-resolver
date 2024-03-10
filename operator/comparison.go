@@ -2,6 +2,8 @@ package operator
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/ZarthaxX/query-resolver/logic"
 	"github.com/ZarthaxX/query-resolver/value"
@@ -13,11 +15,6 @@ type Entity interface {
 	AddField(name value.FieldName, value value.Value)
 }
 
-// TODO: reorder in folder operator
-// ComparisonOperator interface
-// ArithmeticOperator interface
-// Rename expression -> operator
-
 var (
 	errUnresolvableExpression = errors.New("tried resolving an unresolvable expression")
 )
@@ -28,6 +25,8 @@ type Comparison interface {
 	Visit(visitor ExpressionVisitorIntarface)
 	IsConst() bool
 	GetFieldNames() []value.FieldName
+	Negate() Comparison
+	String() string
 }
 
 /*
@@ -78,21 +77,63 @@ func (o *Equal) GetFieldNames() []value.FieldName {
 	return append(o.TermA.GetFieldNames(), o.TermB.GetFieldNames()...)
 }
 
+func (o *Equal) Negate() Comparison {
+	return NewNotEqual(o.TermA, o.TermB)
+}
+
+func (o *Equal) String() string {
+	return fmt.Sprintf("%s = %s", o.TermA, o.TermB)
+}
+
 /*
-LessThan takes 2 values and returns if a is less than b
+NotEqual takes 2 values and returns if their values don't match
 */
-type LessThan struct {
+type NotEqual struct {
+	Equal
+}
+
+func NewNotEqual(a, b Value) *NotEqual {
+	return &NotEqual{
+		Equal: *NewEqual(a, b),
+	}
+}
+
+func (o *NotEqual) Resolve(e Entity) (logic.TruthValue, error) {
+	tv, err := o.Equal.Resolve(e)
+	if err != nil {
+		return logic.Undefined, err
+	}
+
+	return tv.Not(), nil
+}
+
+func (o *NotEqual) Visit(visitor ExpressionVisitorIntarface) {
+	visitor.NotEqual(*o)
+}
+
+func (o *NotEqual) Negate() Comparison {
+	return NewEqual(o.TermA, o.TermB)
+}
+
+func (o *NotEqual) String() string {
+	return fmt.Sprintf("%s ≠ %s", o.TermA, o.TermB)
+}
+
+/*
+Less takes 2 values and returns if a < b
+*/
+type Less struct {
 	TermA, TermB Value
 }
 
-func NewLessThan(a, b Value) *LessThan {
-	return &LessThan{
+func NewLess(a, b Value) *Less {
+	return &Less{
 		TermA: a,
 		TermB: b,
 	}
 }
 
-func (o *LessThan) Resolve(e Entity) (logic.TruthValue, error) {
+func (o *Less) Resolve(e Entity) (logic.TruthValue, error) {
 	if !o.IsResolvable(e) {
 		return logic.Undefined, errUnresolvableExpression
 	}
@@ -110,20 +151,62 @@ func (o *LessThan) Resolve(e Entity) (logic.TruthValue, error) {
 	return va.Less(vb)
 }
 
-func (o *LessThan) IsResolvable(e Entity) bool {
+func (o *Less) IsResolvable(e Entity) bool {
 	return o.TermA.IsResolvable(e) && o.TermB.IsResolvable(e)
 }
 
-func (o *LessThan) Visit(visitor ExpressionVisitorIntarface) {
-	visitor.LessThan(*o)
+func (o *Less) Visit(visitor ExpressionVisitorIntarface) {
+	visitor.Less(*o)
 }
 
-func (o *LessThan) IsConst() bool {
+func (o *Less) IsConst() bool {
 	return o.TermA.IsConst() && o.TermB.IsConst()
 }
 
-func (o *LessThan) GetFieldNames() []value.FieldName {
+func (o *Less) GetFieldNames() []value.FieldName {
 	return append(o.TermA.GetFieldNames(), o.TermB.GetFieldNames()...)
+}
+
+func (o *Less) Negate() Comparison {
+	return NewGreaterEqual(o.TermB, o.TermA)
+}
+
+func (o *Less) String() string {
+	return fmt.Sprintf("%s < %s", o.TermA, o.TermB)
+}
+
+/*
+GreaterEqual takes 2 values and returns if a >= b
+*/
+type GreaterEqual struct {
+	Less
+}
+
+func NewGreaterEqual(a, b Value) *GreaterEqual {
+	return &GreaterEqual{
+		Less: *NewLess(b, a),
+	}
+}
+
+func (o *GreaterEqual) Resolve(e Entity) (logic.TruthValue, error) {
+	tv, err := o.Less.Resolve(e)
+	return tv.Not(), err
+}
+
+func (o *GreaterEqual) Visit(visitor ExpressionVisitorIntarface) {
+	visitor.GreaterEqual(*o)
+}
+
+func (o *GreaterEqual) IsConst() bool {
+	return o.TermA.IsConst() && o.TermB.IsConst()
+}
+
+func (o *GreaterEqual) Negate() Comparison {
+	return NewLess(o.TermA, o.TermB)
+}
+
+func (o *GreaterEqual) String() string {
+	return fmt.Sprintf("%s >= %s", o.TermA, o.TermB)
 }
 
 /*
@@ -205,4 +288,56 @@ func (o *In) GetFieldNames() []value.FieldName {
 	}
 
 	return fieldNames
+}
+
+func (o *In) Negate() Comparison {
+	return NewNotIn(o.Term, o.Terms)
+}
+
+func (o *In) String() string {
+	values := []string{}
+	for _, t := range o.Terms {
+		values = append(values, t.String())
+	}
+
+	return fmt.Sprintf("%s ∈ {%s}", o.Term.String(), strings.Join(values, ", "))
+}
+
+/*
+NotIn takes a value and a list and returns if the value matches any of the list
+*/
+type NotIn struct {
+	In
+}
+
+func NewNotIn(a Value, list []Value) *NotIn {
+	return &NotIn{
+		In: *NewIn(a, list),
+	}
+}
+
+func (o *NotIn) Resolve(e Entity) (logic.TruthValue, error) {
+	v, err := o.In.Resolve(e)
+	if err != nil {
+		return logic.Undefined, err
+	}
+
+	return v.Not(), nil
+}
+
+func (o *NotIn) Visit(visitor ExpressionVisitorIntarface) {
+	visitor.NotIn(*o)
+}
+
+func (o *NotIn) Negate() Comparison {
+	return NewIn(o.Term, o.Terms)
+}
+
+func (o *NotIn) String() string {
+	values := []string{}
+	for _, t := range o.Terms {
+		values = append(values, t.String())
+	}
+
+	return fmt.Sprintf("%s ∉ {%s}", o.Term.String(), strings.Join(values, ", "))
 }

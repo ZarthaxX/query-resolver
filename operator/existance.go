@@ -1,6 +1,8 @@
 package operator
 
 import (
+	"fmt"
+
 	"github.com/ZarthaxX/query-resolver/logic"
 	"github.com/ZarthaxX/query-resolver/value"
 )
@@ -43,6 +45,14 @@ func (o *Exists) GetFieldNames() []value.FieldName {
 	return []value.FieldName{o.Field}
 }
 
+func (o *Exists) Negate() Comparison {
+	return NewNotExists(o.Field)
+}
+
+func (o *Exists) String() string {
+	return fmt.Sprintf("∃ %s", o.Field)
+}
+
 /*
 NotExists takes a field value expression and returns if it exists
 It does not make sense to take a generic Value, because you just check existance of fields
@@ -64,4 +74,12 @@ func (o *NotExists) Resolve(e Entity) (logic.TruthValue, error) {
 
 func (o *NotExists) Visit(visitor ExpressionVisitorIntarface) {
 	visitor.NotExists(*o)
+}
+
+func (o *NotExists) Negate() Comparison {
+	return NewExists(o.Field)
+}
+
+func (o *NotExists) String() string {
+	return fmt.Sprintf("∄ %s", o.Field)
 }

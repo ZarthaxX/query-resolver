@@ -4,6 +4,9 @@ type ExpressionVisitorIntarface interface {
 	Exists(Exists)
 	NotExists(NotExists)
 	Equal(Equal)
-	LessThan(LessThan)
+	NotEqual(NotEqual)
+	Less(Less)
+	GreaterEqual(GreaterEqual)
 	In(In)
+	NotIn(NotIn)
 }
