@@ -73,13 +73,13 @@ func (v PrimitiveEqual[T]) Exists() bool {
 }
 
 func (v PrimitiveEqual[T]) Equal(o Value) (logic.TruthValue, error) {
+	if !o.Exists() {
+		return logic.Undefined, nil
+	}
+	
 	ov, ok := o.Value().(T)
 	if !ok {
 		return logic.False, errors.New("invalid type")
-	}
-
-	if !v.Exists() || !o.Exists() {
-		return logic.Undefined, nil
 	}
 
 	return logic.TruthValueFromBool(v.value == ov), nil
@@ -116,26 +116,26 @@ func (v PrimitiveComparable[T]) Exists() bool {
 }
 
 func (v PrimitiveComparable[T]) Equal(o Value) (logic.TruthValue, error) {
+	if !o.Exists() {
+		return logic.Undefined, nil
+	}
+	
 	ov, ok := o.Value().(T)
 	if !ok {
 		return logic.False, errors.New("invalid type")
-	}
-
-	if !v.Exists() || !o.Exists() {
-		return logic.Undefined, nil
 	}
 
 	return logic.TruthValueFromBool(v.value == ov), nil
 }
 
 func (v PrimitiveComparable[T]) Less(o Value) (logic.TruthValue, error) {
+	if !o.Exists() {
+		return logic.Undefined, nil
+	}
+
 	ov, ok := o.Value().(T)
 	if !ok {
 		return logic.False, errors.New("invalid type")
-	}
-
-	if !o.Exists() {
-		return logic.Undefined, nil
 	}
 
 	return logic.TruthValueFromBool(v.value < ov), nil
@@ -160,26 +160,26 @@ func NewPrimitiveArithmetic[T Number](v T) PrimitiveArithmetic[T] {
 }
 
 func (v PrimitiveArithmetic[T]) Plus(o Value) (Value, error) {
+	if !o.Exists() {
+		return Undefined{}, nil
+	}
+
 	ov, ok := o.Value().(T)
 	if !ok {
 		return nil, errors.New("invalid type")
-	}
-
-	if !o.Exists() {
-		return Undefined{}, nil
 	}
 
 	return NewPrimitiveArithmetic(v.value + ov), nil
 }
 
 func (v PrimitiveArithmetic[T]) Minus(o Value) (Value, error) {
+	if !o.Exists() {
+		return Undefined{}, nil
+	}
+
 	ov, ok := o.Value().(T)
 	if !ok {
 		return nil, errors.New("invalid type")
-	}
-
-	if !o.Exists() {
-		return Undefined{}, nil
 	}
 
 	return NewPrimitiveArithmetic(v.value - ov), nil
