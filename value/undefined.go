@@ -9,7 +9,6 @@ type Value interface {
 	Less(Value) (logic.TruthValue, error)
 	Exists() bool
 	Value() any
-	//GetFieldNames()
 }
 
 type Undefined struct{}
