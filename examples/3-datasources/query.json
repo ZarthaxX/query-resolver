@@ -1,51 +1,53 @@
-[
-    {
-        "range": {
-            "term": "@service.start",
-            "to": {
-                "sum": {
-                    "term_a": "$NOW",
-                    "term_b": 10000000000
+{
+    "and": [
+        {
+            "range": {
+                "term": "@service.start",
+                "to": {
+                    "sum": {
+                        "term_a": "$NOW",
+                        "term_b": 10000000000
+                    }
                 }
             }
+        },
+        {
+            "range": {
+                "term": "@service.amount",
+                "from": 1,
+                "to": 52
+            }
+        },
+        {
+            "equal": {
+                "term_a": 10,
+                "term_b": "@service.amount"
+            }
+        },
+        {
+            "equal": {
+                "term_a": "open",
+                "term_b": "@order.status"
+            }
+        },
+        {
+            "exists": {
+                "field": "@order.status"
+            }
+        },
+        {
+            "not_exists": {
+                "field": "@order.random"
+            }
+        },
+        {
+            "in": {
+                "term": "@order.type",
+                "terms": [
+                    "door",
+                    "pickup"
+                ]
+            }
         }
-    },
-    {
-        "range": {
-            "term": "@service.amount",
-            "from": 1,
-            "to": 52
-        }
-    },
-    {
-        "equal": {
-            "term_a": 10,
-            "term_b": "@service.amount"
-        }
-    },
-    {
-        "equal": {
-            "term_a": "open",
-            "term_b": "@order.status"
-        }
-    },
-    {
-        "exists": {
-            "field": "@order.status"
-        }
-    },
-    {
-        "not_exists": {
-            "field": "@order.random"
-        }
-    },
-    {
-        "in": {
-            "term": "@order.type",
-            "terms": [
-                "door",
-                "pickup"
-            ]
-        }
-    }
-]
+    ]
+}

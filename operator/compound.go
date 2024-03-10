@@ -28,7 +28,13 @@ func NewAnd(terms ...Comparison) *And {
 
 func (a *And) Resolve(e Entity) (logic.TruthValue, error) {
 	res := logic.True
+	var skippedTerm bool
 	for _, term := range a.Terms {
+		if !term.IsResolvable(e) {
+			skippedTerm = true
+			continue
+		}
+
 		tv, err := term.Resolve(e)
 		if err != nil {
 			return logic.Undefined, err
@@ -39,12 +45,17 @@ func (a *And) Resolve(e Entity) (logic.TruthValue, error) {
 			return logic.False, nil
 		}
 	}
+	// if value is true and did not evaluate some term, then this result is fake and expression is unresolvable
+	if skippedTerm && res == logic.True {
+		return logic.Undefined, errUnresolvableExpression
+	}
 
 	return res, nil
 }
 
 func (a *And) IsResolvable(e Entity) bool {
-	return false // TODO: check this
+	_, err := a.Resolve(e)
+	return err == nil
 }
 
 func (a *And) Visit(visitor ExpressionVisitorIntarface) {

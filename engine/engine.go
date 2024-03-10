@@ -7,9 +7,8 @@ import (
 
 	"github.com/ZarthaxX/query-resolver/logic"
 	"github.com/ZarthaxX/query-resolver/operator"
+	"github.com/ZarthaxX/query-resolver/transform"
 	"github.com/ZarthaxX/query-resolver/value"
-
-	"golang.org/x/exp/maps"
 )
 
 var ErrQueryExpressionUnsolvable = errors.New("query expression is unsolvable")
@@ -36,89 +35,78 @@ func NewExpressionResolver[T comparable](sources []DataSource[T]) *ExpressionRes
 }
 
 func (e *ExpressionResolver[T]) ProcessQuery(ctx context.Context, query QueryExpression, resultSchema ResultSchema) (
-	entities Entities[T],
-	solved bool,
-	err error,
-) {
-	entities, err = e.resolveQuery(ctx, query, Entities[T]{})
-	if err != nil {
-		return nil, false, err
-	}
-
-	return e.buildResultSchema(ctx, entities, resultSchema)
-}
-
-func (e *ExpressionResolver[T]) resolveQuery(ctx context.Context, query QueryExpression, entities Entities[T]) (Entities[T], error) {
-	if len(entities) == 0 {
-		var retrieved bool
-		for _, src := range e.sources {
-			var err error
-			entities, retrieved, err = src.RetrieveFields(ctx, query, entities)
-			if err != nil {
-				return nil, err
-			}
-
-			if retrieved {
-				break
-			}
-		}
-
-		if !retrieved {
-			return nil, ErrQueryExpressionUnsolvable
-		}
-	}
-
-	var err error
-	query, entities, err = e.applyQuery(query, entities)
-	if err != nil {
-		return nil, err
-	}
-
-	for len(query) > 0 && len(entities) > 0 {
-		var entitiesChanged bool
-		for i := 0; i < len(e.sources) && len(entities) > 0; i++ {
-			var sourceChangedEntities bool
-			entities, sourceChangedEntities, err = e.retrieveEntities(ctx, query, entities, e.sources[i])
-			if err != nil {
-				return nil, err
-			}
-
-			if sourceChangedEntities {
-				entitiesChanged = true
-				// solving it each time we retrieve entities might cause unsolvable queries
-				// because there may be 2 datasource that could benefit from the same query expression
-				// despite that, we better off reducing the entities each time, to avoid cloggering data sources
-				query, entities, err = e.applyQuery(query, entities)
-				if err != nil {
-					return nil, err
-				}
-			}
-		}
-
-		// no entity changed on this run, so this query is partially solvable
-		if !entitiesChanged {
-			return entities, QueryExpressionPartiallySolvableError{RemainingQuery: query}
-		}
-	}
-
-	return entities, nil
-}
-
-func (e *ExpressionResolver[T]) retrieveEntities(ctx context.Context, query QueryExpression, entities Entities[T], source DataSource[T]) (
 	Entities[T],
 	bool,
 	error,
 ) {
+	finalEntities := Entities[T]{}
+	query = transform.ToDisjunctiveNormalForm(query)
+	for _, clause := range query.(*operator.Or).Terms {
+		entities, err := e.resolveQuery(ctx, clause.(*operator.And), Entities[T]{})
+		if err != nil {
+			return nil, false, err
+		}
+
+		for id, e := range entities {
+			finalEntities[id] = e
+		}
+	}
+
+	return e.buildResultSchema(ctx, finalEntities, resultSchema)
+}
+
+func (e *ExpressionResolver[T]) resolveQuery(ctx context.Context, query *operator.And, entities Entities[T]) (Entities[T], error) {
+	sources := make([]DataSource[T], len(e.sources))
+	copy(sources, e.sources)
+
+	retrievedFields := []value.FieldName{}
+	entitiesChanged := true
+	for entitiesChanged && len(sources) > 0 {
+		entitiesChanged = false
+		newSources := []DataSource[T]{}
+		for _, source := range sources {
+			retrievedEntities, applied, changed, err := e.retrieveEntities(ctx, retrievedFields, query, entities, source)
+			if err != nil {
+				return nil, err
+			}
+			if !applied {
+				newSources = append(newSources, source)
+				continue
+			}
+
+			retrievedFields = append(retrievedFields, source.GetRetrievableFields()...)
+			entities = retrievedEntities
+			entitiesChanged = entitiesChanged || changed
+		}
+
+		sources = newSources
+	}
+
+	return e.filterEntitiesByQuery(query, entities)
+}
+
+func (e *ExpressionResolver[T]) retrieveEntities(ctx context.Context, retrievableFields []value.FieldName, query *operator.And, entities Entities[T], source DataSource[T]) (
+	result Entities[T],
+	applied bool,
+	changed bool,
+	err error,
+) {
 	// entitiesChanged tells us if a new field was added to ANY entity
 	// if not, we can safely assume we cannot move from this state, so the expression will be unsolvable
 	var entitiesChanged bool
-	retrievableFields := source.GetRetrievableFields()
+	retrievableFields = append(retrievableFields, source.GetRetrievableFields()...)
 	retrievedEntities, ok, err := source.RetrieveFields(ctx, query, entities)
 	if err != nil {
-		return nil, false, err
+		return nil, false, false, err
 	}
 	if !ok {
-		return entities, false, nil
+		return entities, false, false, nil
+	}
+
+	for id := range retrievedEntities {
+		if _, ok := entities[id]; !ok {
+			entities[id] = NewEntity[T](id)
+		}
 	}
 
 	for id, entity := range entities {
@@ -135,7 +123,7 @@ func (e *ExpressionResolver[T]) retrieveEntities(ctx context.Context, query Quer
 			if de.FieldExists(f) != logic.Undefined && entity.FieldExists(f) == logic.Undefined {
 				v, err := de.SeekField(f)
 				if err != nil {
-					return nil, false, err
+					return nil, false, false, err
 				}
 				entity.AddField(f, v)
 				entitiesChanged = true
@@ -150,48 +138,31 @@ func (e *ExpressionResolver[T]) retrieveEntities(ctx context.Context, query Quer
 		entities[id] = entity
 	}
 
-	return entities, entitiesChanged, nil
+	return entities, true, entitiesChanged, nil
 }
 
-func (e *ExpressionResolver[T]) applyQuery(query QueryExpression, entities Entities[T]) (QueryExpression, Entities[T], error) {
-	// no entities, query is solved
-	if len(entities) == 0 {
-		return nil, nil, nil
-	}
-
-	newQuery := QueryExpression{}
-	for _, operator := range query {
-		entity := maps.Values(entities)[0]
-		if !operator.IsResolvable(&entity) {
-			newQuery = append(newQuery, operator)
-		}
-	}
-
+func (e *ExpressionResolver[T]) filterEntitiesByQuery(query *operator.And, entities Entities[T]) (Entities[T], error) {
 	newEntities := Entities[T]{}
-	// we filter entities that do not apply for some operator
 	for _, e := range entities {
-		var filterEntity bool
-		for _, operator := range query {
-			if operator.IsResolvable(&e) { // should be true for all entities, as they are being processed in parallel
-				ok, err := operator.Resolve(&e)
-				if err != nil {
-					return nil, nil, err
-				}
-
-				// If we got UNDEFINED or FALSE, then this entity does not apply
-				if ok != logic.True {
-					filterEntity = true
-					break
-				}
-			}
+		// if an entity is unresolvalbe, then all of them are
+		if !query.IsResolvable(&e) {
+			return nil, ErrQueryExpressionUnsolvable
 		}
 
-		if !filterEntity {
-			newEntities[e.id] = e
+		ok, err := query.Resolve(&e)
+		if err != nil {
+			return nil, err
 		}
+
+		// If we got UNDEFINED or FALSE, then this entity does not apply
+		if ok != logic.True {
+			continue
+		}
+
+		newEntities[e.id] = e
 	}
 
-	return newQuery, newEntities, nil
+	return newEntities, nil
 }
 
 func (e *ExpressionResolver[T]) buildResultSchema(ctx context.Context, entities Entities[T], resultSchema ResultSchema) (
@@ -203,17 +174,13 @@ func (e *ExpressionResolver[T]) buildResultSchema(ctx context.Context, entities 
 		return nil, true, nil
 	}
 
-	query := QueryExpression{}
+	terms := []operator.Comparison{}
 	for _, f := range resultSchema {
-		query = append(query, operator.NewExists(f))
+		terms = append(terms, operator.NewExists(f))
 	}
 
-	entities, err := e.resolveQuery(ctx, query, entities)
+	entities, err := e.resolveQuery(ctx, operator.NewAnd(terms...), entities)
 	if err != nil {
-		if errors.As(err, &QueryExpressionPartiallySolvableError{}) {
-			return entities, false, nil
-		}
-
 		return nil, false, err
 	}
 

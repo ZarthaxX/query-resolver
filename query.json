@@ -1,0 +1,55 @@
+{
+    "and": [
+        {
+            "equal": {
+                "term_a": "open",
+                "term_b": "@order.status"
+            }
+        },
+        {
+            "not": {
+                "and": [
+                    {
+                        "exists": {
+                            "field": "@order.status"
+                        }
+                    },
+                    {
+                        "in": {
+                            "term": "@order.type",
+                            "terms": [
+                                "door",
+                                "pickup"
+                            ]
+                        }
+                    }
+                ]
+            }
+        }, 
+        {
+            "or": [
+                {
+                    "range": {
+                        "term": "@service.start",
+                        "to": {
+                            "sum": {
+                                "term_a": "$NOW",
+                                "term_b": 10000000000
+                            }
+                        }
+                    }
+                },
+                {
+                    "not": 
+                    {
+                        "range": {
+                            "term": "@service.amount",
+                            "from": 1,
+                            "to": 52
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

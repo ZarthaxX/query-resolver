@@ -227,7 +227,11 @@ func (q *rangeOperator) UnmarshalJSON(b []byte) error {
 		operators = append(operators, operator.NewLess(v.value, to.value))
 	}
 
-	q.operator = operator.NewAnd(operators...)
+	if len(operators) > 1 {
+		q.operator = operator.NewAnd(operators...)
+	} else {
+		q.operator = operators[0]
+	}
 
 	return nil
 }
