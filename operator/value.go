@@ -1,7 +1,9 @@
 package operator
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/ZarthaxX/query-resolver/logic"
 	"github.com/ZarthaxX/query-resolver/value"
@@ -9,6 +11,15 @@ import (
 
 type Value interface {
 	Resolve(e Entity) (value.Value, error)
+	IsResolvable(e Entity) bool // call this before Resolve to check if value can be resolvable and avoid errors
+	GetFieldNames() []value.FieldName
+	IsConst() bool
+	IsField(value.FieldName) bool
+	String() string
+}
+
+type ListValue interface {
+	Resolve(e Entity) ([]value.Value, error)
 	IsResolvable(e Entity) bool // call this before Resolve to check if value can be resolvable and avoid errors
 	GetFieldNames() []value.FieldName
 	IsConst() bool
@@ -51,7 +62,40 @@ func (o *Field) IsField(f value.FieldName) bool {
 }
 
 func (o *Field) String() string {
-	return o.FieldName
+	return fmt.Sprintf("@%s", o.FieldName)
+}
+
+type ListField struct {
+	Field
+}
+
+func NewListField(fieldName value.FieldName) *ListField {
+	return &ListField{
+		Field: *NewField(fieldName),
+	}
+}
+
+func (o ListField) Resolve(e Entity) (res []value.Value, err error) {
+	if !o.IsResolvable(e) {
+		return nil, errUnresolvableExpression
+	}
+
+	v, err := e.SeekField(o.FieldName)
+	if err != nil {
+		return nil, err
+	}
+
+	rawValue, exists := v.Value()
+	if !exists {
+		return nil, nil
+	}
+
+	list, ok := rawValue.([]value.Value)
+	if !ok {
+		return nil, errors.New("value is not a list")
+	}
+
+	return list, nil
 }
 
 type Const struct {
@@ -83,5 +127,43 @@ func (o *Const) IsField(_ value.FieldName) bool {
 }
 
 func (o *Const) String() string {
-	return fmt.Sprintf("%+v", o.value.Value())
+	v, _ := o.value.Value()
+	return fmt.Sprintf("%+v", v)
+}
+
+type ConstList struct {
+	values []value.Value
+}
+
+func NewConstList(v []value.Value) *ConstList {
+	return &ConstList{values: v}
+}
+
+func (o ConstList) Resolve(e Entity) ([]value.Value, error) {
+	return o.values, nil
+}
+
+func (o ConstList) IsResolvable(e Entity) bool {
+	return true
+}
+
+func (o *ConstList) GetFieldNames() []value.FieldName {
+	return []value.FieldName{}
+}
+
+func (o *ConstList) IsConst() bool {
+	return true
+}
+
+func (o *ConstList) IsField(_ value.FieldName) bool {
+	return false
+}
+
+func (o *ConstList) String() string {
+	values := []string{}
+	for _, v := range o.values {
+		values = append(values, fmt.Sprintf("%+v", v.MustValue()))
+	}
+
+	return fmt.Sprintf("[%s]", strings.Join(values, ", "))
 }

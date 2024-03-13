@@ -138,7 +138,8 @@ func (a *Or) Resolve(e Entity) (logic.TruthValue, error) {
 }
 
 func (a *Or) IsResolvable(e Entity) bool {
-	return false // TODO: check this
+	_, err := a.Resolve(e)
+	return err == nil
 }
 
 func (a *Or) Visit(visitor ExpressionVisitorIntarface) {
@@ -199,7 +200,7 @@ func (a *Not) Resolve(e Entity) (logic.TruthValue, error) {
 }
 
 func (a *Not) IsResolvable(e Entity) bool {
-	return false // TODO: check this
+	return a.Term.IsResolvable(e)
 }
 
 func (a *Not) Visit(visitor ExpressionVisitorIntarface) {

@@ -61,7 +61,7 @@ func (t *Template) entityToMap(entity operator.Entity) (res map[string]any, err 
 	for f, fn := range t.fields {
 		if entity.FieldExists(fn) == logic.True {
 			cv, _ := entity.SeekField(fn)
-			res[f] = cv.Value()
+			res[f], _ = cv.Value()
 		}
 	}
 

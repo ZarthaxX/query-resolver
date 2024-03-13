@@ -8,6 +8,7 @@ import (
 
 	"github.com/ZarthaxX/query-resolver/operator"
 	"github.com/ZarthaxX/query-resolver/value"
+	"golang.org/x/exp/maps"
 )
 
 func QueryFromJSON(rawQuery []byte) (operator.Comparison, error) {
@@ -142,49 +143,36 @@ func (q *comparisonOperator) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	if rm, ok := fields["range"]; ok {
-		var rangeOp rangeOperator
-		if err := json.Unmarshal(*rm, &rangeOp); err != nil {
-			return err
-		}
-		q.operator = rangeOp.operator
-		return nil
+	opTypes := maps.Keys(fields)
+	if len(opTypes) != 1 {
+		return errors.New("there should be 1 operation and one only")
 	}
 
-	if rm, ok := fields["equal"]; ok {
-		var equalOp equalOperator
-		if err := json.Unmarshal(*rm, &equalOp); err != nil {
-			return err
-		}
-		q.operator = equalOp.operator
-		return nil
+	var op any
+	opData := fields[opTypes[0]]
+	switch opTypes[0] {
+	case "range":
+		op = &rangeOperator{}
+	case "equal":
+		op = &equalOperator{}
+	case "not_equal":
+		op = &notEqualOperator{}
+	case "exists":
+		op = &existsOperator{}
+	case "not_exists":
+		op = &notExistsOperator{}
+	case "in":
+		op = &inOperator{}
+	case "not_in":
+		op = &notInOperator{}
 	}
 
-	if rm, ok := fields["exists"]; ok {
-		var existsOp existsOperator
-		if err := json.Unmarshal(*rm, &existsOp); err != nil {
-			return err
-		}
-		q.operator = existsOp.operator
-		return nil
-	}
-
-	if rm, ok := fields["not_exists"]; ok {
-		var notExistsOp notExistsOperator
-		if err := json.Unmarshal(*rm, &notExistsOp); err != nil {
-			return err
-		}
-		q.operator = notExistsOp.operator
-		return nil
-	}
-
-	if rm, ok := fields["in"]; ok {
-		var inOp inOperator
-		if err := json.Unmarshal(*rm, &inOp); err != nil {
+	if op != nil {
+		if err := json.Unmarshal(*opData, op); err != nil {
 			return err
 		}
 
-		q.operator = inOp.operator
+		q.operator = op.(operator.Comparison)
 		return nil
 	}
 
@@ -199,7 +187,7 @@ func (q *comparisonOperator) UnmarshalJSON(b []byte) error {
 }
 
 type rangeOperator struct {
-	operator operator.Comparison
+	operator.Comparison
 }
 
 func (q *rangeOperator) UnmarshalJSON(b []byte) error {
@@ -228,16 +216,16 @@ func (q *rangeOperator) UnmarshalJSON(b []byte) error {
 	}
 
 	if len(operators) > 1 {
-		q.operator = operator.NewAnd(operators...)
+		q.Comparison = operator.NewAnd(operators...)
 	} else {
-		q.operator = operators[0]
+		q.Comparison = operators[0]
 	}
 
 	return nil
 }
 
 type existsOperator struct {
-	operator operator.Comparison
+	operator.Comparison
 }
 
 func (q *existsOperator) UnmarshalJSON(b []byte) error {
@@ -256,38 +244,27 @@ func (q *existsOperator) UnmarshalJSON(b []byte) error {
 	}
 	field = field[1:]
 
-	q.operator = operator.NewExists(field)
+	q.Comparison = operator.NewExists(field)
 
 	return nil
 }
 
 type notExistsOperator struct {
-	operator operator.Comparison
+	operator.Comparison
 }
 
 func (q *notExistsOperator) UnmarshalJSON(b []byte) error {
-	var fields map[string]*json.RawMessage
-	if err := json.Unmarshal(b, &fields); err != nil {
+	op := existsOperator{}
+	if err := json.Unmarshal(b, &op); err != nil {
 		return err
 	}
 
-	var field value.FieldName
-	if err := json.Unmarshal(*fields["field"], &field); err != nil {
-		return err
-	}
-
-	if !strings.HasPrefix(field, "@") {
-		return errors.New("value is not a field")
-	}
-	field = field[1:]
-
-	q.operator = operator.NewNotExists(field)
-
+	q.Comparison = op.Comparison.Negate()
 	return nil
 }
 
 type equalOperator struct {
-	operator operator.Comparison
+	operator.Comparison
 }
 
 func (q *equalOperator) UnmarshalJSON(b []byte) error {
@@ -304,13 +281,27 @@ func (q *equalOperator) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	q.operator = operator.NewEqual(va.value, vb.value)
+	q.Comparison = operator.NewEqual(va.value, vb.value)
 
 	return nil
 }
 
+type notEqualOperator struct {
+	operator.Comparison
+}
+
+func (q *notEqualOperator) UnmarshalJSON(b []byte) error {
+	op := equalOperator{}
+	if err := json.Unmarshal(b, &op); err != nil {
+		return err
+	}
+
+	q.Comparison = op.Comparison.Negate()
+	return nil
+}
+
 type inOperator struct {
-	operator operator.Comparison
+	operator.Comparison
 }
 
 func (q *inOperator) UnmarshalJSON(b []byte) error {
@@ -324,22 +315,27 @@ func (q *inOperator) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	var list []*json.RawMessage
-	values := []operator.Value{}
+	var list listValueExpression
 	if err := json.Unmarshal(*fields["terms"], &list); err != nil {
 		return err
 	}
 
-	for _, elem := range list {
-		var e valueExpression
-		if err := json.Unmarshal(*elem, &e); err != nil {
-			return err
-		}
-		values = append(values, e.value)
+	q.Comparison = operator.NewIn(v.value, list.value)
+
+	return nil
+}
+
+type notInOperator struct {
+	operator.Comparison
+}
+
+func (q *notInOperator) UnmarshalJSON(b []byte) error {
+	var op inOperator
+	if err := json.Unmarshal(b, &op); err != nil {
+		return err
 	}
 
-	q.operator = operator.NewIn(v.value, values)
-
+	q.Comparison = op.Comparison.Negate()
 	return nil
 }
 
@@ -430,6 +426,66 @@ func (q *sumOperator) UnmarshalJSON(b []byte) error {
 	}
 
 	q.operator = operator.NewSum(va.value, vb.value)
+
+	return nil
+}
+
+type listValueExpression struct {
+	value operator.ListValue
+}
+
+func (q *listValueExpression) UnmarshalJSON(b []byte) error {
+	var booleans []bool
+	if err := json.Unmarshal(b, &booleans); err == nil {
+		values := []value.Value{}
+		for _, v := range booleans {
+			values = append(values, value.NewBool(v))
+		}
+		q.value = operator.NewConstList(values)
+		return nil
+	}
+
+	var integers []int64
+	if err := json.Unmarshal(b, &integers); err == nil {
+		values := []value.Value{}
+		for _, v := range integers {
+			values = append(values, value.NewInt64(v))
+		}
+		q.value = operator.NewConstList(values)
+		return nil
+	}
+
+	var floats []float64
+	if err := json.Unmarshal(b, &floats); err == nil {
+		values := []value.Value{}
+		for _, v := range integers {
+			values = append(values, value.NewInt64(v))
+		}
+		q.value = operator.NewConstList(values)
+		return nil
+	}
+
+	var v string
+	if err := json.Unmarshal(b, &v); err == nil {
+		if strings.HasPrefix(v, "@") {
+			q.value = operator.NewListField(v[1:])
+		} else {
+			return errors.New("not a valid list value")
+		}
+
+		return nil
+	}
+
+	var strings []string
+	if err := json.Unmarshal(b, &strings); err == nil {
+		values := []value.Value{}
+		for _, v := range strings {
+			values = append(values, value.NewString(v))
+		}
+		q.value = operator.NewConstList(values)
+
+		return nil
+	}
 
 	return nil
 }

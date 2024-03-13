@@ -30,14 +30,14 @@ func (v *OrderVisitor) Equal(e operator.Equal) {
 
 	if e.TermA.IsResolvable(EmptyEntity) {
 		ra, _ := e.TermA.Resolve(EmptyEntity)
-		va, _ := ra.Value().(int64)
+		va, _ := ra.MustValue().(int64)
 		v.serviceAmountFrom = &va
 		v.serviceAmountTo = &va
 	}
 
 	if e.TermB.IsResolvable(EmptyEntity) {
 		rb, _ := e.TermB.Resolve(EmptyEntity)
-		vb, _ := rb.Value().(int64)
+		vb, _ := rb.MustValue().(int64)
 		v.serviceAmountFrom = &vb
 		v.serviceAmountTo = &vb
 	}
@@ -50,13 +50,13 @@ func (v *OrderVisitor) Less(e operator.Less) {
 
 	if e.TermA.IsConst() {
 		ra, _ := e.TermA.Resolve(EmptyEntity)
-		va, _ := ra.Value().(int64)
+		va, _ := ra.MustValue().(int64)
 		v.serviceAmountFrom = &va
 	}
 
 	if e.TermB.IsConst() {
 		rb, _ := e.TermB.Resolve(EmptyEntity)
-		vb, _ := rb.Value().(int64)
+		vb, _ := rb.MustValue().(int64)
 		v.serviceAmountTo = &vb
 	}
 }
