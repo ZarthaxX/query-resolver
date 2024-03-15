@@ -216,7 +216,7 @@ func (a *Not) GetFieldNames() []value.FieldName {
 }
 
 func (a *Not) Negate() Comparison {
-	return a.Term.Negate()
+	return a.Term
 }
 
 func (a *Not) String() string {
