@@ -7,15 +7,11 @@ type Value interface {
 	Minus(Value) (Value, error)
 	Equal(Value) (logic.TruthValue, error)
 	Less(Value) (logic.TruthValue, error)
-	Exists() bool
-	Value() any
+	Value() (any, bool)
+	MustValue() any
 }
 
 type Undefined struct{}
-
-func (v Undefined) Exists() bool {
-	return false
-}
 
 func (v Undefined) Plus(o Value) (Value, error) {
 	return v, nil
@@ -33,6 +29,10 @@ func (v Undefined) Less(o Value) (logic.TruthValue, error) {
 	return logic.Undefined, nil
 }
 
-func (v Undefined) Value() any {
+func (v Undefined) Value() (any, bool) {
+	return nil, false
+}
+
+func (v Undefined) MustValue() any {
 	return nil
 }

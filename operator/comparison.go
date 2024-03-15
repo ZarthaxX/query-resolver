@@ -214,10 +214,10 @@ In takes 2 values and returns if their values match
 */
 type In struct {
 	Term  Value
-	Terms []Value
+	Terms ListValue
 }
 
-func NewIn(a Value, list []Value) *In {
+func NewIn(a Value, list ListValue) *In {
 	return &In{
 		Term:  a,
 		Terms: list,
@@ -227,39 +227,28 @@ func NewIn(a Value, list []Value) *In {
 func (o *In) Resolve(e Entity) (logic.TruthValue, error) {
 	va, err := o.Term.Resolve(e)
 	if err != nil {
-		return logic.False, err
+		return logic.Undefined, err
 	}
 
-	var unresolvableValueExists bool
-	for _, elem := range o.Terms {
-		if elem.IsResolvable(e) {
-			v, err := elem.Resolve(e)
-			if err != nil {
-				return logic.Undefined, err
-			}
+	values, err := o.Terms.Resolve(e)
+	if err != nil {
+		return logic.Undefined, err
+	}
 
-			tv, err := v.Equal(va)
-			if err != nil {
-				return logic.Undefined, err
-			}
-			if tv == logic.True {
-				return logic.True, nil
-			}
-		} else {
-			unresolvableValueExists = true
+	for _, v := range values {
+		tv, err := v.Equal(va)
+		if err != nil {
+			return logic.Undefined, err
 		}
-	}
-
-	if unresolvableValueExists {
-		return logic.Undefined, errors.New("unresolvable value")
+		if tv == logic.True {
+			return logic.True, nil
+		}
 	}
 
 	return logic.False, nil
 }
 
 func (o *In) IsResolvable(e Entity) bool {
-	// try resolving the expression, because we just need 1 resolvable expression that matches
-	// or in the worst case, we need every expression from the list because none match
 	if _, err := o.Resolve(e); err == errUnresolvableExpression {
 		return false
 	} else {
@@ -272,22 +261,11 @@ func (o *In) Visit(visitor ExpressionVisitorIntarface) {
 }
 
 func (o *In) IsConst() bool {
-	for _, e := range o.Terms {
-		if !e.IsConst() {
-			return false
-		}
-	}
-
-	return o.Term.IsConst()
+	return o.Term.IsConst() && o.Terms.IsConst()
 }
 
 func (o *In) GetFieldNames() []value.FieldName {
-	fieldNames := o.Term.GetFieldNames()
-	for _, e := range o.Terms {
-		fieldNames = append(fieldNames, e.GetFieldNames()...)
-	}
-
-	return fieldNames
+	return append(o.Term.GetFieldNames(), o.Terms.GetFieldNames()...)
 }
 
 func (o *In) Negate() Comparison {
@@ -295,12 +273,7 @@ func (o *In) Negate() Comparison {
 }
 
 func (o *In) String() string {
-	values := []string{}
-	for _, t := range o.Terms {
-		values = append(values, t.String())
-	}
-
-	return fmt.Sprintf("%s ∈ {%s}", o.Term.String(), strings.Join(values, ", "))
+	return fmt.Sprintf("%s ∈ %s", o.Term.String(), o.Terms.String())
 }
 
 /*
@@ -310,7 +283,7 @@ type NotIn struct {
 	In
 }
 
-func NewNotIn(a Value, list []Value) *NotIn {
+func NewNotIn(a Value, list ListValue) *NotIn {
 	return &NotIn{
 		In: *NewIn(a, list),
 	}
@@ -334,10 +307,5 @@ func (o *NotIn) Negate() Comparison {
 }
 
 func (o *NotIn) String() string {
-	values := []string{}
-	for _, t := range o.Terms {
-		values = append(values, t.String())
-	}
-
-	return fmt.Sprintf("%s ∉ {%s}", o.Term.String(), strings.Join(values, ", "))
+	return strings.Replace(o.In.String(), "∈", "∉", 1)
 }

@@ -2,6 +2,7 @@ package operator
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/ZarthaxX/query-resolver/logic"
 	"github.com/ZarthaxX/query-resolver/value"
@@ -50,7 +51,7 @@ func (o *Exists) Negate() Comparison {
 }
 
 func (o *Exists) String() string {
-	return fmt.Sprintf("∃ %s", o.Field)
+	return fmt.Sprintf("∃ @%s", o.Field)
 }
 
 /*
@@ -81,5 +82,5 @@ func (o *NotExists) Negate() Comparison {
 }
 
 func (o *NotExists) String() string {
-	return fmt.Sprintf("∄ %s", o.Field)
+	return strings.Replace(o.Exists.String(), "∃", "∄", 1)
 }

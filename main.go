@@ -18,7 +18,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(query)
-	fmt.Println(transform.ToNegationNormalForm(query))
-	fmt.Println(transform.ToDisjunctiveNormalForm(query))
+	fmt.Println("base query\n", query)
+	fmt.Println("nnf\n", transform.ToNegationNormalForm(query))
+	fmt.Println("dnf\n", transform.ToDisjunctiveNormalForm(query))
 }

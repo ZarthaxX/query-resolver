@@ -30,12 +30,12 @@ func NewPrimitiveBasic[T any](v T) PrimitiveBasic[T] {
 	}
 }
 
-func (v PrimitiveBasic[T]) Value() any {
+func (v PrimitiveBasic[T]) MustValue() any {
 	return v.value
 }
 
-func (v PrimitiveBasic[T]) Exists() bool {
-	return true
+func (v PrimitiveBasic[T]) Value() (any, bool) {
+	return v.value, true
 }
 
 func (v PrimitiveBasic[T]) Equal(o Value) (logic.TruthValue, error) {
@@ -64,20 +64,13 @@ func NewPrimitiveEqual[T Equal](v T) PrimitiveEqual[T] {
 	}
 }
 
-func (v PrimitiveEqual[T]) Value() any {
-	return v.value
-}
-
-func (v PrimitiveEqual[T]) Exists() bool {
-	return true
-}
-
 func (v PrimitiveEqual[T]) Equal(o Value) (logic.TruthValue, error) {
-	if !o.Exists() {
+	rv, ok := o.Value()
+	if !ok {
 		return logic.Undefined, nil
 	}
-	
-	ov, ok := o.Value().(T)
+
+	ov, ok := rv.(T)
 	if !ok {
 		return logic.False, errors.New("invalid type")
 	}
@@ -107,20 +100,13 @@ func NewPrimitiveComparable[T Comparable](v T) PrimitiveComparable[T] {
 	}
 }
 
-func (v PrimitiveComparable[T]) Value() any {
-	return v.value
-}
-
-func (v PrimitiveComparable[T]) Exists() bool {
-	return true
-}
-
 func (v PrimitiveComparable[T]) Equal(o Value) (logic.TruthValue, error) {
-	if !o.Exists() {
+	rv, ok := o.Value()
+	if !ok {
 		return logic.Undefined, nil
 	}
-	
-	ov, ok := o.Value().(T)
+
+	ov, ok := rv.(T)
 	if !ok {
 		return logic.False, errors.New("invalid type")
 	}
@@ -129,11 +115,12 @@ func (v PrimitiveComparable[T]) Equal(o Value) (logic.TruthValue, error) {
 }
 
 func (v PrimitiveComparable[T]) Less(o Value) (logic.TruthValue, error) {
-	if !o.Exists() {
+	rv, ok := o.Value()
+	if !ok {
 		return logic.Undefined, nil
 	}
 
-	ov, ok := o.Value().(T)
+	ov, ok := rv.(T)
 	if !ok {
 		return logic.False, errors.New("invalid type")
 	}
@@ -160,11 +147,12 @@ func NewPrimitiveArithmetic[T Number](v T) PrimitiveArithmetic[T] {
 }
 
 func (v PrimitiveArithmetic[T]) Plus(o Value) (Value, error) {
-	if !o.Exists() {
+	rv, ok := o.Value()
+	if !ok {
 		return Undefined{}, nil
 	}
 
-	ov, ok := o.Value().(T)
+	ov, ok := rv.(T)
 	if !ok {
 		return nil, errors.New("invalid type")
 	}
@@ -173,11 +161,12 @@ func (v PrimitiveArithmetic[T]) Plus(o Value) (Value, error) {
 }
 
 func (v PrimitiveArithmetic[T]) Minus(o Value) (Value, error) {
-	if !o.Exists() {
+	rv, ok := o.Value()
+	if !ok {
 		return Undefined{}, nil
 	}
 
-	ov, ok := o.Value().(T)
+	ov, ok := rv.(T)
 	if !ok {
 		return nil, errors.New("invalid type")
 	}

@@ -59,7 +59,7 @@ func (e *ExpressionResolver[T]) resolveQuery(ctx context.Context, query *operato
 	sources := make([]DataSource[T], len(e.sources))
 	copy(sources, e.sources)
 
-	retrievedFields := []value.FieldName{}
+	retrievedFields := map[value.FieldName]struct{}{}
 	entitiesChanged := true
 	for entitiesChanged && len(sources) > 0 {
 		entitiesChanged = false
@@ -74,7 +74,9 @@ func (e *ExpressionResolver[T]) resolveQuery(ctx context.Context, query *operato
 				continue
 			}
 
-			retrievedFields = append(retrievedFields, source.GetRetrievableFields()...)
+			for _, fn := range source.GetRetrievableFields() {
+				retrievedFields[fn] = struct{}{}
+			}
 			entities = retrievedEntities
 			entitiesChanged = entitiesChanged || changed
 		}
@@ -85,16 +87,12 @@ func (e *ExpressionResolver[T]) resolveQuery(ctx context.Context, query *operato
 	return e.filterEntitiesByQuery(query, entities)
 }
 
-func (e *ExpressionResolver[T]) retrieveEntities(ctx context.Context, retrievableFields []value.FieldName, query *operator.And, entities Entities[T], source DataSource[T]) (
+func (e *ExpressionResolver[T]) retrieveEntities(ctx context.Context, retrievedFields map[value.FieldName]struct{}, query *operator.And, entities Entities[T], source DataSource[T]) (
 	result Entities[T],
 	applied bool,
 	changed bool,
 	err error,
 ) {
-	// entitiesChanged tells us if a new field was added to ANY entity
-	// if not, we can safely assume we cannot move from this state, so the expression will be unsolvable
-	var entitiesChanged bool
-	retrievableFields = append(retrievableFields, source.GetRetrievableFields()...)
 	retrievedEntities, ok, err := source.RetrieveFields(ctx, query, entities)
 	if err != nil {
 		return nil, false, false, err
@@ -109,6 +107,16 @@ func (e *ExpressionResolver[T]) retrieveEntities(ctx context.Context, retrievabl
 		}
 	}
 
+	retrievableFields := map[value.FieldName]struct{}{}
+	for _, fn := range source.GetRetrievableFields() {
+		retrievableFields[fn] = struct{}{}
+	}
+	for fn := range retrievedFields {
+		retrievableFields[fn] = struct{}{}
+	}
+	// entitiesChanged tells us if a new field was added to ANY entity
+	// if not, we can safely assume we cannot move from this state, so the expression will be unsolvable
+	var entitiesChanged bool
 	for id, entity := range entities {
 		de, ok := retrievedEntities[id]
 		// if this entity was not found, initialize it empty
@@ -119,7 +127,7 @@ func (e *ExpressionResolver[T]) retrieveEntities(ctx context.Context, retrievabl
 		// for each possible field, we check if it came in the decorated entity
 		// if it did, we add the field to the actual one
 		// if not, we just add an empty field to it
-		for _, f := range retrievableFields {
+		for f := range retrievableFields {
 			if de.FieldExists(f) != logic.Undefined && entity.FieldExists(f) == logic.Undefined {
 				v, err := de.SeekField(f)
 				if err != nil {

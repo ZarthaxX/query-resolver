@@ -1,7 +1,30 @@
 {
     "and": [
         {
+            "not_exists": {
+                "field": "@order.type"
+            }
+        },
+        {
+            "in": {
+                "term": 123,
+                "terms": "@order.drivers"
+            }
+        },
+        {
+            "not_in": {
+                "term": 123,
+                "terms": "@order.drivers"
+            }
+        },
+        {
             "equal": {
+                "term_a": "open",
+                "term_b": "@order.status"
+            }
+        },
+        {
+            "not_equal": {
                 "term_a": "open",
                 "term_b": "@order.status"
             }
@@ -25,7 +48,7 @@
                     }
                 ]
             }
-        }, 
+        },
         {
             "or": [
                 {
@@ -40,8 +63,7 @@
                     }
                 },
                 {
-                    "not": 
-                    {
+                    "not": {
                         "range": {
                             "term": "@service.amount",
                             "from": 1,
